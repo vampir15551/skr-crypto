@@ -52,8 +52,11 @@ jobs:
   changelog:
     # Every PR that touches code must also update CHANGELOG.md so the
     # log doesn't rot. Pure-doc PRs are exempt (the CHANGELOG is itself
-    # docs).
-    if: github.event_name == 'pull_request'
+    # docs); Dependabot PRs are exempt (bots don't curate changelogs —
+    # we batch their notes manually at release time).
+    if: >
+      github.event_name == 'pull_request' &&
+      github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
