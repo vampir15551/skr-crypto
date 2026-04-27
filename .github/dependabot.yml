@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Group all minor/patch bumps into one PR per week to reduce churn.
+    # Major bumps still come as individual PRs (they may break things).
+    groups:
+      python-dev:
+        patterns: ["pytest*", "ruff", "responses", "pytest-mock"]
+      python-runtime:
+        patterns: ["click", "requests", "rich", "python-dotenv"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3

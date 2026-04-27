@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skr-crypto"
+description = "Operator CLI for SKR Crypto microservices (install, update, observe, audit). Money-moving operations are deliberately NOT exposed here — they go through the authenticated HTTP API."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Vladimir Petrosov" }]
+requires-python = ">=3.11"
+dynamic = ["version"]
+keywords = ["crypto", "tron", "usdt", "cli", "ops"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = [
+    # Click is the most boring/stable CLI lib in the ecosystem. Typer is
+    # nicer but adds Pydantic v2 + tighter coupling we don't need.
+    "click>=8.1,<9.0",
+    # Rich for tables / colours. We keep its surface narrow (Console + Table).
+    "rich>=13.7,<15.0",
+    # requests for HTTP — sync, well-known, plays nicely with mocking.
+    "requests>=2.31,<3.0",
+    # python-dotenv for parsing the service's .env (read-only on our side).
+    "python-dotenv>=1.0,<2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "responses>=0.25",
+    "ruff>=0.5",
+    "build>=1.2",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+]
+
+[project.scripts]
+skr-crypto = "skr_crypto.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/vampir15551/skr-crypto"
+Documentation = "https://skr-crypto.readthedocs.io"
+Issues = "https://github.com/vampir15551/skr-crypto/issues"
+Changelog = "https://github.com/vampir15551/skr-crypto/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["skr_crypto", "skr_crypto.commands"]
+
+[tool.setuptools.dynamic]
+version = { attr = "skr_crypto.version.__version__" }
+
+# ---------------------------------------------------------------------------
+# Test runner
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "-q",
+    "--tb=short",
+    "--strict-markers",
+]
+testpaths = ["tests"]
+
+# ---------------------------------------------------------------------------
+# Lint
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# F (pyflakes), E/W (pycodestyle), I (isort), B (bugbear), UP (pyupgrade),
+# SIM (simplify), RUF (ruff-specific). No D (docstring rules) — we write
+# docstrings where they add value, not as a lint requirement.
+select = ["F", "E", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = [
+    # Line-too-long is enforced by formatter; we don't need both noisy.
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use throw-away local names; B011 (assert False) is intentional in some.
+"tests/**" = ["B011"]

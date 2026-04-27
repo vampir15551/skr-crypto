@@ -1,0 +1,107 @@
+name: release
+
+# Triggered when a tag like v0.2.0 is pushed. Builds the wheel + sdist,
+# publishes to PyPI via OIDC trusted publishing (no API token in
+# secrets), then opens a GitHub Release with the matching CHANGELOG
+# section as the release body.
+#
+# To enable PyPI publishing on first run:
+#   1. PyPI → Project → Publishing → "Add a new publisher"
+#   2. Owner = vpetrosov, Repo = skr-crypto, Workflow = release.yml,
+#      Environment = pypi.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      # Sanity-check: tag and __version__ must agree. If they drift,
+      # users will install a misbranded wheel. Fail loud.
+      - name: Verify tag matches __version__
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="v$(python -c 'from skr_crypto.version import __version__; print(__version__)')"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Tag $TAG does not match __version__ $VERSION"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # required for trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: [publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Extract the section for this version from CHANGELOG.md and use
+      # it as the release body. If the section is empty, we still ship
+      # — the tag itself is the source of truth — but warn loudly.
+      - name: Extract changelog
+        id: changelog
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          # Use awk to print lines between "## [VERSION]" and the next "## ".
+          BODY=$(awk -v v="\\[$VERSION\\]" '
+            $0 ~ "^## " v { flag=1; next }
+            flag && /^## / { exit }
+            flag { print }
+          ' CHANGELOG.md)
+          if [ -z "$BODY" ]; then
+            echo "::warning::No CHANGELOG section for $VERSION — release body will be empty"
+            BODY="See CHANGELOG.md."
+          fi
+          # Multiline output via heredoc.
+          {
+            echo 'body<<EOF'
+            echo "$BODY"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.body }}
+          files: dist/*
+          generate_release_notes: false

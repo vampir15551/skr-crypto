@@ -1,0 +1,74 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel any in-progress run for the same branch when a new push lands —
+# shaves CI minutes and gives quicker feedback on rapid pushes.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test against the minimum supported Python and the latest stable.
+        # 3.11 is our floor (pyproject.toml).
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package + dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check skr_crypto tests
+
+      - name: Tests
+        run: pytest -v
+
+      # Verify the CLI is wired correctly post-install (catches issues
+      # like a missing entry_points definition or a broken __main__).
+      - name: Smoke-test CLI
+        run: |
+          skr-crypto --version
+          skr-crypto help
+          skr-crypto doctor --json | python -m json.tool > /dev/null
+
+  changelog:
+    # Every PR that touches code must also update CHANGELOG.md so the
+    # log doesn't rot. Pure-doc PRs are exempt (the CHANGELOG is itself
+    # docs).
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify CHANGELOG updated
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          changed=$(git diff --name-only "$base" "$head")
+          # Allowed to skip if the PR only touches docs/ or markdown.
+          if echo "$changed" | grep -qvE '^(docs/|.*\.md$|\.github/)'; then
+            if ! echo "$changed" | grep -q '^CHANGELOG\.md$'; then
+              echo "::error::CHANGELOG.md not updated. Add a line under [Unreleased]."
+              exit 1
+            fi
+          fi

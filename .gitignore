@@ -1,0 +1,35 @@
+# Build / package artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtualenvs
+venv/
+.venv/
+env/
+
+# Test / cache
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Local config the user might create — never commit secrets.
+.env
+.env.local
+*.env.bak-*
+
+# Built docs
+site/
