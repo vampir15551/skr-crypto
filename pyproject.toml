@@ -29,7 +29,7 @@ dependencies = [
     # nicer but adds Pydantic v2 + tighter coupling we don't need.
     "click>=8.1,<9.0",
     # Rich for tables / colours. We keep its surface narrow (Console + Table).
-    "rich>=13.7,<15.0",
+    "rich>=13.7,<16.0",
     # requests for HTTP — sync, well-known, plays nicely with mocking.
     "requests>=2.31,<3.0",
     # python-dotenv for parsing the service's .env (read-only on our side).
