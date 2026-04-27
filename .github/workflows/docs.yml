@@ -1,12 +1,15 @@
 name: docs
 
+# DISABLED: GitHub Pages requires GitHub Pro for private repos.
+# To re-enable, either:
+#   (a) upgrade to GH Pro and revert this trigger to push: branches: [main],
+#   (b) make this repo public (the docs are already free of secrets), or
+#   (c) host the built `site/` from `mkdocs build` on your VPS under
+#       e.g. Caddy at docs.<your-domain>.
+# Keep `workflow_dispatch` so we can still smoke-test the build manually
+# and so a future re-enable doesn't lose the file.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "docs/**"
-      - "mkdocs.yml"
-      - ".github/workflows/docs.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
