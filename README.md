@@ -7,14 +7,18 @@ authenticated HTTP API. See [SECURITY.md](SECURITY.md).
 
 ## Quick start
 
+Distribution is private — install from a GitHub Release wheel:
+
 ```bash
-pip install skr-crypto
+pip install https://github.com/vampir15551/skr-crypto/releases/latest/download/skr_crypto-0.1.0-py3-none-any.whl
 skr-crypto install                  # clones the service, generates AUTH_TOKEN
 skr-crypto config edit              # set TRONGRID_API_KEY etc.
-export PRIVATE_KEY_HEX='<your hex>'
+skr-crypto keygen --write-to env    # OR: bring your own PRIVATE_KEY_HEX
 skr-crypto start
 skr-crypto status                   # ✓ running, healthy, version printed
 ```
+
+Or for development from source: `git clone … && pip install -e .`
 
 ## What the CLI does
 
@@ -53,7 +57,7 @@ Diagnostics
 
 ```bash
 # First time on a host
-pip install skr-crypto
+pip install https://github.com/vampir15551/skr-crypto/releases/latest/download/skr_crypto-0.1.0-py3-none-any.whl
 skr-crypto install --git-url https://github.com/vampir15551/skr_crypto-payouts.git
 
 # Roll forward to the latest tagged release

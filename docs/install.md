@@ -1,10 +1,14 @@
 # Install
 
-The CLI is a Python package. Install it via pip from PyPI:
+The CLI is a private Python package distributed via GitHub Releases.
+Pick the latest wheel from <https://github.com/vampir15551/skr-crypto/releases>
+and:
 
 ```bash
-pip install skr-crypto
+pip install https://github.com/vampir15551/skr-crypto/releases/latest/download/skr_crypto-0.1.0-py3-none-any.whl
 ```
+
+(URL pattern: `…/releases/download/<TAG>/skr_crypto-<VERSION>-py3-none-any.whl`).
 
 For development (clone + editable install):
 

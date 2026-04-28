@@ -33,6 +33,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("config show",     "Show config with secrets masked"),
         ("config edit",     "Open .env in $EDITOR"),
         ("config validate", "Run the service's config-validation checks"),
+        ("keygen",          "Generate a fresh TRON private key (one-time, shown once)"),
     ]),
     ("Backups", [
         ("backup",  "Snapshot the data dir (audit + idempotency DB)"),

@@ -5,6 +5,11 @@ the right to break things in a minor release if the operational lesson
 is severe enough — but every break gets a `**Breaking:**` line in
 `CHANGELOG.md` and a migration note.
 
+Distribution is **private** — wheels are attached to GitHub Releases
+on tag push. There is **no PyPI upload**. Consumers install with
+`pip install <wheel-url>` (the URL from the release page) or by
+cloning the repo and `pip install -e .`.
+
 ## Pre-release
 
 - [ ] All tests green: `pytest -v`
@@ -29,7 +34,7 @@ is severe enough — but every break gets a `**Breaking:**` line in
 # Look at what's about to ship
 git diff $(git describe --tags --abbrev=0)..HEAD
 
-# Tag (annotated, signed if you have a GPG key)
+# Tag (annotated + signed — see CONTRIBUTING for one-time signing setup)
 git tag -s v0.2.0 -m "v0.2.0 — see CHANGELOG.md"
 
 # Push code + tag in one go
@@ -37,42 +42,33 @@ git push origin main v0.2.0
 ```
 
 The `release.yml` workflow takes it from there:
-1. Builds the wheel + sdist.
-2. Verifies the tag matches `__version__`.
-3. Publishes to PyPI via OIDC trusted publishing.
-4. Opens a GitHub Release with the matching CHANGELOG section as the body.
 
-If trusted publishing isn't set up yet, the first release fails at
-step 3 with "OIDC token rejected" — go to PyPI → project →
-Publishing → "Add a new publisher" with:
-- Owner: `vampir15551`
-- Repo: `skr-crypto`
-- Workflow filename: `release.yml`
-- Environment: `pypi`
+1. Builds the wheel + sdist.
+2. Verifies the tag matches `__version__` (fails the run otherwise).
+3. Creates a GitHub Release with the matching CHANGELOG section as
+   the body and the wheel + sdist attached.
 
 ## Verify the release
 
-- [ ] `pip install -U skr-crypto` (in a clean venv) installs the new
-      version.
-- [ ] `skr-crypto --version` prints the new number.
-- [ ] PyPI page shows the new release: <https://pypi.org/project/skr-crypto/>
-- [ ] GH Release page exists with the changelog body and the wheel
-      attached.
-- [ ] If anyone's depending on the docs site — refresh and confirm
-      the new pages are live.
+- [ ] GitHub Release page exists with the changelog body and the
+      wheel attached:
+      <https://github.com/vampir15551/skr-crypto/releases>
+- [ ] In a clean venv on the target host:
+  ```
+  python3.12 -m venv /tmp/skr-fresh
+  /tmp/skr-fresh/bin/pip install \
+      https://github.com/vampir15551/skr-crypto/releases/download/v0.2.0/skr_crypto-0.2.0-py3-none-any.whl
+  /tmp/skr-fresh/bin/skr-crypto --version  # → 0.2.0
+  ```
+- [ ] If anyone else uses the tool, ping them with the release URL.
 
 ## Rollback
 
-PyPI doesn't allow re-uploading a yanked version, but you can yank
-broken versions so `pip install` skips them:
-
-```bash
-# On pypi.org, click "Yank release" — users keeping the version
-# pinned still get it; default `pip install` skips it.
-```
-
-For users on the broken version, push `v0.2.1` with the fix —
-yanking + a new patch is cheaper than chasing a deleted tag.
+GitHub Releases can be deleted (`gh release delete v0.2.0 --yes`),
+which removes the wheel and the release page. The git tag remains
+unless you also delete it (`git tag -d v0.2.0 && git push --delete
+origin v0.2.0`). Generally prefer **shipping a v0.2.1 fix** to
+deleting a tag — fewer footguns, cleaner history.
 
 ## Versioning policy details
 

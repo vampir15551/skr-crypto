@@ -9,6 +9,26 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+### Added
+- `skr-crypto keygen` — generate a fresh TRON private key, derive the
+  address, optionally write to the selected backend (`--write-to
+  env|file|keychain`). Auto-detects from the installed service's
+  `KEY_PROVIDER` if no flag given. Refuses to overwrite an existing
+  file. Hex value shown once and only once. Tronpy is lazy-imported
+  so the CLI itself doesn't carry the dep weight.
+- All commits and tags now signed via SSH (operator's existing
+  ed25519 key). Add the same key to GitHub as a Signing Key for the
+  green "Verified" badge.
+
+### Changed
+- **Distribution is private now.** `release.yml` no longer publishes
+  to PyPI. On `v*.*.*` tag push it builds the wheel + sdist and
+  attaches them to a GitHub Release together with the matching
+  CHANGELOG section. Consumers install via
+  `pip install <release-wheel-url>`.
+- README, RELEASE, install docs, and quick-start examples updated to
+  drop PyPI references.
+
 ## [0.1.0] — 2026-04-28
 
 ### Added
@@ -41,7 +61,9 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 - Test suite: 82 tests covering CLI top-level, all command happy +
   sad paths, .env parsing, sensitive-key masking, regime detection.
 - CI: GitHub Actions for tests on every push (Python 3.11 + 3.12),
-  CHANGELOG-touched gate on PRs, PyPI trusted-publishing on
-  `v*.*.*` tags, MkDocs site auto-deploy on `main`.
+  CHANGELOG-touched gate on PRs (Dependabot exempt), private wheels
+  attached to GitHub Releases on `v*.*.*` tags. (No PyPI publishing
+  — distribution is private.) MkDocs workflow disabled until docs
+  hosting is decided.
 - Docs: README, INSTALL, COMMANDS reference, SECURITY model,
   RELEASE checklist.

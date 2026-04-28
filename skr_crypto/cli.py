@@ -54,6 +54,7 @@ def _register() -> None:
         doctor,
         help_cmd,
         install,
+        keygen,
         logs,
         reconcile,
         restore,
@@ -75,6 +76,7 @@ def _register() -> None:
     cli.add_command(audit.cmd)
     cli.add_command(reconcile.cmd)
     cli.add_command(config_cmd.config_group)
+    cli.add_command(keygen.cmd)
     cli.add_command(backup.cmd)
     cli.add_command(restore.cmd)
     cli.add_command(doctor.cmd)

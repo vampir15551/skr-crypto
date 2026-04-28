@@ -16,10 +16,12 @@ service's authenticated HTTP API.
 ## Quick start
 
 ```bash
-pip install skr-crypto
+# Install the latest wheel from a private GitHub Release.
+pip install https://github.com/vampir15551/skr-crypto/releases/latest/download/skr_crypto-0.1.0-py3-none-any.whl
+
 skr-crypto install                  # → ~/.skr-crypto, generates AUTH_TOKEN
 skr-crypto config edit              # → set TRONGRID_API_KEY etc.
-export PRIVATE_KEY_HEX='<your hex>'
+skr-crypto keygen --write-to env    # OR bring your own PRIVATE_KEY_HEX
 skr-crypto start
 skr-crypto status                   # ✓ running, healthy, version printed
 ```
