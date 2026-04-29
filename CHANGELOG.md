@@ -9,6 +9,38 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+### Added
+- **Numbered wizard prompts.** `skr-crypto install` (interactive)
+  now uses ``ask_choice_numbered`` and ``ask_yes_no`` helpers — every
+  multi-choice prompt shows ``1) … 2) … 3) …`` with the default
+  marked. Operators can type the number, the value name (`env`,
+  `mainnet`), or just hit Enter for the default. Out-of-range or
+  non-digit input reprompts cleanly.
+- **Per-provider follow-up prompts.** After picking a `KEY_PROVIDER`
+  the wizard immediately asks for the relevant extras: `file` →
+  `PRIVATE_KEY_FILE`; `1password` → `OP_VAULT` + `OP_ITEM` +
+  `OP_FIELD`; `keychain` → `KEYCHAIN_SERVICE` + `KEYCHAIN_ACCOUNT`.
+  Closes the gap where you'd pick `file` and then have to dig into
+  `skr-crypto config edit` to set the path.
+- **`--advanced` flag (and prompt).** Opens a tier-2 set of prompts
+  for `MIN_TRX_RESERVE`, `MAX_ENERGY_BURN_TRX`, `SHUTDOWN_TIMEOUT`,
+  `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW`. Hidden behind a yes/no
+  toggle in interactive mode so first-time installs stay short.
+- **New install flags** for non-interactive deploys:
+  `--key-file`, `--op-vault`, `--op-item`, `--op-field`,
+  `--keychain-service`, `--keychain-account`, `--advanced`.
+- The wizard's "Next steps" output now branches on the chosen
+  `KEY_PROVIDER` — different hint per backend, e.g.
+  `op signin` reminder for 1password, exact `keygen --write-to file
+  --path` line for the file backend.
+
+### Changed
+- `output.ask_choice` (free-text constrained prompt) is preserved
+  but new prompts should prefer `ask_choice_numbered` for ergonomics.
+- Install tests rewritten to feed numbered answers; 18 scenarios
+  cover env / file / 1password / keychain wizard paths plus
+  invalid-input reprompts and the `--advanced` flow.
+
 ## [1.1.0] — 2026-04-29
 
 Operator-experience release: `skr-crypto install` is now a real
