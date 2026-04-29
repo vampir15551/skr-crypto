@@ -1,0 +1,368 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "USDT TRC-20 Payouts — operational dashboard. Import this JSON in Grafana, point the data source at the Prometheus that scrapes the service's /api/v1/metrics endpoint.",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "iteration": 1,
+  "panels": [
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "payouts_node_connected",
+          "refId": "A"
+        }
+      ],
+      "title": "TronGrid connected",
+      "type": "stat"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["last"] }
+      },
+      "targets": [
+        { "expr": "payouts_uptime_seconds", "refId": "A" }
+      ],
+      "title": "Uptime",
+      "type": "stat"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "id": 3,
+      "options": { "reduceOptions": { "calcs": ["last"] }, "colorMode": "value" },
+      "targets": [
+        { "expr": "payouts_trx_balance", "refId": "A" }
+      ],
+      "title": "Treasury TRX",
+      "type": "stat"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "id": 4,
+      "options": { "reduceOptions": { "calcs": ["last"] }, "colorMode": "value" },
+      "targets": [
+        { "expr": "payouts_usdt_balance", "refId": "A" }
+      ],
+      "title": "Treasury USDT",
+      "type": "stat"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": { "calcs": ["last"] },
+        "graphMode": "none"
+      },
+      "targets": [
+        { "expr": "payouts_idempotency_store_size", "refId": "A" }
+      ],
+      "title": "Idempotency keys tracked",
+      "type": "stat"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": { "calcs": ["last"] },
+        "graphMode": "none"
+      },
+      "targets": [
+        { "expr": "increase(payouts_idempotency_unresolved_total[24h])", "refId": "A" }
+      ],
+      "title": "Unresolved keys (24h) — needs reconcile",
+      "type": "stat"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "id": 10,
+      "title": "Broadcast rate (per minute)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (result) (rate(payouts_tx_broadcast_total[5m])) * 60",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "options": { "legend": { "showLegend": true, "placement": "bottom" } }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "id": 11,
+      "title": "Rejections by reason (per minute)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (reason) (rate(payouts_tx_rejected_total[5m])) * 60",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "options": { "legend": { "showLegend": true, "placement": "bottom" } }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "id": 12,
+      "title": "/send latency (p50 / p90 / p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(payouts_tx_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(payouts_tx_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p90",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(payouts_tx_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2 }
+        }
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "id": 13,
+      "title": "Energy estimate distribution (warm <20k vs cold ≥20k)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(payouts_energy_estimated_bucket[5m])) by (le))",
+          "legendFormat": "p50 estimate",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(payouts_energy_estimated_bucket[5m])) by (le))",
+          "legendFormat": "p95 estimate",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": { "drawStyle": "line", "lineWidth": 2 }
+        }
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "id": 14,
+      "title": "Estimated TRX burn per tx",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(payouts_energy_burn_trx_estimated_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(payouts_energy_burn_trx_estimated_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": { "drawStyle": "line", "lineWidth": 2 }
+        }
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "id": 15,
+      "title": "On-chain resources",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "payouts_energy_available",
+          "legendFormat": "energy",
+          "refId": "A"
+        },
+        {
+          "expr": "payouts_bandwidth_free_available",
+          "legendFormat": "bandwidth (free)",
+          "refId": "B"
+        },
+        {
+          "expr": "payouts_bandwidth_paid_available",
+          "legendFormat": "bandwidth (staked)",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": { "drawStyle": "line", "lineWidth": 2 }
+        }
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+      "id": 16,
+      "title": "HTTP traffic by status class",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(payouts_http_requests_total[5m])) * 60",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "bars", "fillOpacity": 30, "lineWidth": 1 }
+        }
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["payouts", "tron", "usdt"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Prometheus", "value": "Prometheus" },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-3h", "to": "now" },
+  "timezone": "Europe/Moscow",
+  "title": "USDT TRC-20 Payouts",
+  "uid": "payouts-tron-usdt",
+  "version": 1
+}

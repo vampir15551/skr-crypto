@@ -1,0 +1,111 @@
+name: Incident report
+description: A money-path or audit-trail incident in production.
+labels: [incident, money-path]
+title: "[INCIDENT] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for incidents that affect production: stuck broadcasts,
+        audit corruption, idempotency anomalies, double-broadcast, drained
+        balance, etc. **The runbooks at `runbooks/` are the first thing
+        to read.**
+
+        For anything that suggests the private key is compromised, do NOT
+        open this issue — follow `SECURITY.md` reporting steps instead.
+
+  - type: input
+    id: when
+    attributes:
+      label: Timestamp (UTC)
+      description: Approximate when the incident started, ISO 8601.
+      placeholder: "2026-04-29T10:23:00Z"
+    validations:
+      required: true
+
+  - type: input
+    id: txid
+    attributes:
+      label: Transaction id (if any)
+      description: Hex txid, if a specific broadcast is involved. Empty if not.
+      placeholder: "0xabc…"
+    validations:
+      required: false
+
+  - type: input
+    id: idempotency_key
+    attributes:
+      label: Idempotency key (if any)
+      description: The X-Idempotency-Key value, if a specific request is
+                   involved.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: env
+    attributes:
+      label: Environment
+      options:
+        - mainnet
+        - shasta (testnet)
+        - nile (testnet)
+        - other / unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptoms
+    attributes:
+      label: Symptoms
+      description: What's wrong. Quote logs verbatim.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: runbook_followed
+    attributes:
+      label: Runbook(s) consulted
+      description: Which `runbooks/*.md` you walked through. Where it
+                   diverged from the runbook (if it did).
+    validations:
+      required: true
+
+  - type: textarea
+    id: state
+    attributes:
+      label: Service state
+      description: Output of `skr-crypto status --json` and
+                   `skr-crypto doctor --json` at the time of the incident.
+      render: json
+
+  - type: textarea
+    id: audit_excerpt
+    attributes:
+      label: Relevant audit lines
+      description: Output of `skr-crypto audit --since YYYY-MM-DD --json`
+                   filtered to the incident window. Mask any sensitive
+                   addresses if needed.
+      render: json
+
+  - type: textarea
+    id: actions
+    attributes:
+      label: Actions taken
+      description: What you did to mitigate, in order. Include exact
+                   commands.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Operator-assessed severity
+      options:
+        - "1 — funds at risk / lost"
+        - "2 — service impaired, no fund risk"
+        - "3 — degraded, recoverable without intervention"
+        - "4 — informational / postmortem"
+    validations:
+      required: true

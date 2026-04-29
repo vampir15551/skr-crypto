@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from skr_crypto.cli import cli
+from skr_crypto.cli.main import cli
 
 
 def _audit_line(event, **fields):

@@ -1,0 +1,484 @@
+#!/usr/bin/env python3
+"""Interactive setup wizard.
+
+Run from the project root::
+
+    ./scripts/setup.py
+
+Walks you through:
+
+  1. Picking a key-provider backend (1password / env / file / keychain).
+  2. Filling in the relevant config fields and validating them.
+  3. Choosing audit / idempotency paths (relative to project root by
+     default — matches run.sh which always cd's there).
+  4. Picking bind host and auto-shutdown timeout.
+  5. Writing ``.env`` (with a backup of any existing file) and creating
+     the ``data/`` directory.
+
+Idempotent: if ``.env`` already has values, those are offered as the
+default for each prompt. Re-run any time to tweak settings.
+"""
+from __future__ import annotations
+
+import os
+import re
+import secrets
+import shutil
+import sys
+from datetime import datetime
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENV_PATH = PROJECT_ROOT / ".env"
+ENV_EXAMPLE = PROJECT_ROOT / ".env.example"
+
+KEY_PROVIDERS = ("1password", "env", "file", "keychain")
+
+
+# ---------------------------------------------------------------------------
+# I/O helpers
+# ---------------------------------------------------------------------------
+
+
+def _print(msg: str = "") -> None:
+    print(msg, flush=True)
+
+
+def _hr() -> None:
+    _print("─" * 72)
+
+
+def _heading(text: str) -> None:
+    _hr()
+    _print(text)
+    _hr()
+
+
+def _ask(prompt: str, default: str | None = None, *, secret: bool = False) -> str:
+    """Prompt with a default. Returns the entered value (or default)."""
+    suffix = f" [{default}]" if default not in (None, "") else ""
+    while True:
+        if secret:
+            import getpass
+            val = getpass.getpass(f"{prompt}{suffix}: ").strip()
+        else:
+            val = input(f"{prompt}{suffix}: ").strip()
+        if val:
+            return val
+        if default is not None:
+            return default
+        _print("  (required — please enter a value)")
+
+
+def _ask_choice(prompt: str, choices: tuple[str, ...], default: str) -> str:
+    while True:
+        chosen = _ask(f"{prompt} ({'/'.join(choices)})", default).lower()
+        if chosen in choices:
+            return chosen
+        _print(f"  (must be one of: {', '.join(choices)})")
+
+
+def _ask_yes_no(prompt: str, default_yes: bool = True) -> bool:
+    default = "y" if default_yes else "n"
+    while True:
+        chosen = _ask(f"{prompt} (y/n)", default).lower()
+        if chosen in ("y", "yes"):
+            return True
+        if chosen in ("n", "no"):
+            return False
+
+
+# ---------------------------------------------------------------------------
+# .env parsing / writing
+# ---------------------------------------------------------------------------
+
+
+_ENV_LINE = re.compile(r"^([A-Z_][A-Z0-9_]*)\s*=(.*)$")
+
+
+def read_env(path: Path) -> dict[str, str]:
+    """Parse a dotenv file into a dict. Comments and blank lines ignored.
+
+    Values with surrounding quotes are stripped. Inline comments after
+    ``#`` are preserved as part of the value if not separated by space —
+    matches python-dotenv behaviour for the common case.
+    """
+    out: dict[str, str] = {}
+    if not path.exists():
+        return out
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = _ENV_LINE.match(line)
+        if not m:
+            continue
+        key, val = m.group(1), m.group(2).strip()
+        # Strip an inline " # comment" — generous: only when separated by
+        # whitespace, so values like "secret#with#hash" survive.
+        if " #" in val:
+            val = val.split(" #", 1)[0].rstrip()
+        if (val.startswith('"') and val.endswith('"')) or (
+            val.startswith("'") and val.endswith("'")
+        ):
+            val = val[1:-1]
+        out[key] = val
+    return out
+
+
+def write_env(path: Path, values: dict[str, str]) -> None:
+    """Write a clean .env, grouped + commented for human readability."""
+    groups: list[tuple[str, list[str]]] = [
+        ("Auth", ["AUTH_TOKEN"]),
+        ("Key provider", [
+            "KEY_PROVIDER",
+            "OP_VAULT", "OP_ITEM", "OP_FIELD",
+            "PRIVATE_KEY_FILE",
+            "KEYCHAIN_SERVICE", "KEYCHAIN_ACCOUNT",
+        ]),
+        ("TRON network", [
+            "TRON_NETWORK", "TRONGRID_API_KEY", "USDT_CONTRACT",
+            "USDT_FEE_LIMIT_SUN", "MIN_TRX_RESERVE", "TRON_HTTP_TIMEOUT",
+        ]),
+        ("Cost / energy", [
+            "TRON_ENERGY_PRICE_SUN_FALLBACK",
+            "MAX_ENERGY_BURN_TRX",
+            "FEE_LIMIT_SAFETY_MULT",
+        ]),
+        ("Persistence", ["AUDIT_LOG_FILE", "IDEMPOTENCY_DB_PATH"]),
+        ("Server", [
+            "SERVER_HOST", "SERVER_PORT", "SHUTDOWN_TIMEOUT",
+            "RATE_LIMIT_MAX", "RATE_LIMIT_WINDOW", "TRUSTED_PROXIES",
+        ]),
+    ]
+    seen: set[str] = set()
+    lines: list[str] = [
+        "# Generated by scripts/setup.py — re-run any time to update.",
+        f"# Last run: {datetime.now().isoformat(timespec='seconds')}",
+        "",
+    ]
+    for label, keys in groups:
+        section = [f"# {label}"]
+        had_any = False
+        for k in keys:
+            if k in values and values[k] != "":
+                section.append(f"{k}={values[k]}")
+                seen.add(k)
+                had_any = True
+        if had_any:
+            lines.extend(section)
+            lines.append("")
+    # Anything not in a known group — preserve at the end so manual edits
+    # survive a re-run.
+    extras = [(k, v) for k, v in values.items() if k not in seen and v != ""]
+    if extras:
+        lines.append("# Other")
+        for k, v in extras:
+            lines.append(f"{k}={v}")
+        lines.append("")
+    path.write_text("\n".join(lines), encoding="utf-8")
+    os.chmod(path, 0o600)
+
+
+def backup_existing(path: Path) -> Path | None:
+    if not path.exists():
+        return None
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup = path.with_suffix(f".env.bak-{ts}")
+    shutil.copy2(path, backup)
+    return backup
+
+
+# ---------------------------------------------------------------------------
+# Validators
+# ---------------------------------------------------------------------------
+
+
+def _validate_tron_address(addr: str) -> str:
+    if not addr.startswith("T") or len(addr) != 34:
+        return "must start with T and be 34 characters long"
+    return ""
+
+
+def _validate_int(s: str, *, min_val: int | None = None) -> str:
+    try:
+        n = int(s)
+    except ValueError:
+        return "must be an integer"
+    if min_val is not None and n < min_val:
+        return f"must be ≥ {min_val}"
+    return ""
+
+
+def _validate_decimal(s: str, *, min_val: float | None = None) -> str:
+    try:
+        n = float(s)
+    except ValueError:
+        return "must be a number"
+    if min_val is not None and n < min_val:
+        return f"must be ≥ {min_val}"
+    return ""
+
+
+def _validate_hex_key_no_save(s: str) -> str:
+    """Validate but never echo — for env-provider key entry."""
+    s = s.strip()
+    if s.startswith("0x") or s.startswith("0X"):
+        s = s[2:]
+    if not all(c in "0123456789abcdefABCDEF" for c in s):
+        return "must be hex (no 0x prefix or with 0x prefix; case-insensitive)"
+    if len(s) != 64:
+        return "must be exactly 32 bytes (64 hex chars)"
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# Wizard
+# ---------------------------------------------------------------------------
+
+
+def main() -> int:
+    _heading("USDT TRC-20 Payout Service — setup wizard")
+    _print()
+    _print(f"Project root: {PROJECT_ROOT}")
+    _print(f".env path:    {ENV_PATH}")
+    _print()
+
+    existing = read_env(ENV_PATH)
+    if existing:
+        _print(f"Found {len(existing)} existing values in .env. Each prompt below")
+        _print("offers the current value as the default — press Enter to keep it.")
+        _print()
+
+    # ── Auth token ───────────────────────────────────────────────────────
+    _heading("1. API auth")
+    _print("AUTH_TOKEN is the X-API-Key header your clients must send.")
+    _print("Generate a fresh one or paste your existing token.")
+    if _ask_yes_no("Generate a new random AUTH_TOKEN?",
+                   default_yes=not existing.get("AUTH_TOKEN")):
+        token = secrets.token_urlsafe(32)
+        _print(f"  generated: {token}")
+        _print("  (save this — your clients will need it)")
+    else:
+        token = _ask("AUTH_TOKEN", existing.get("AUTH_TOKEN"))
+
+    # ── Key provider ─────────────────────────────────────────────────────
+    _heading("2. Private key backend")
+    _print("How should the service load the TRON treasury private key?")
+    _print("  1password — read via `op` CLI; needs the CLI installed and signed in.")
+    _print("  env       — raw hex in PRIVATE_KEY_HEX env var (set by orchestrator).")
+    _print("  file      — chmod-600 file with raw hex.")
+    _print("  keychain  — macOS Keychain (security tool).")
+    provider = _ask_choice(
+        "KEY_PROVIDER",
+        KEY_PROVIDERS,
+        existing.get("KEY_PROVIDER", "1password"),
+    )
+
+    op_vault = op_item = op_field = ""
+    pk_file = ""
+    keychain_service = keychain_account = ""
+
+    if provider == "1password":
+        op_vault = _ask("  1Password vault", existing.get("OP_VAULT", "Treasury"))
+        op_item = _ask("  1Password item",
+                       existing.get("OP_ITEM", "TRON-Treasury"))
+        op_field = _ask("  1Password field", existing.get("OP_FIELD", "password"))
+    elif provider == "env":
+        _print("  PRIVATE_KEY_HEX must be set in the environment at runtime,")
+        _print("  not in .env (so it's not stored on disk).")
+        if _ask_yes_no("  Validate a test key now (NOT saved anywhere)?",
+                       default_yes=False):
+            while True:
+                k = _ask("  Paste hex key", "", secret=True)
+                err = _validate_hex_key_no_save(k)
+                if not err:
+                    _print("  ✓ valid 32-byte hex")
+                    break
+                _print(f"  ✗ {err}")
+            del k
+    elif provider == "file":
+        while True:
+            pk_file = _ask(
+                "  PRIVATE_KEY_FILE path",
+                existing.get("PRIVATE_KEY_FILE", "/etc/payouts/treasury.key"),
+            )
+            if Path(pk_file).exists():
+                mode = os.stat(pk_file).st_mode & 0o777
+                if mode & 0o077:
+                    _print(f"  ⚠  file exists but mode {mode:o} is unsafe; "
+                           "the service will refuse to load it (need 0600)")
+                    if _ask_yes_no("  Fix mode now (chmod 600)?"):
+                        os.chmod(pk_file, 0o600)
+                        _print("  ✓ chmod 600 applied")
+                else:
+                    _print("  ✓ file exists with mode 0600")
+                break
+            else:
+                _print(f"  ⚠  file does not exist yet — make sure to create it "
+                       f"with `chmod 600 {pk_file}` before starting the service.")
+                if _ask_yes_no("  Continue anyway?"):
+                    break
+    elif provider == "keychain":
+        keychain_service = _ask("  Keychain service",
+                                existing.get("KEYCHAIN_SERVICE", "payouts"))
+        keychain_account = _ask("  Keychain account",
+                                existing.get("KEYCHAIN_ACCOUNT", "treasury"))
+        _print()
+        _print("  Store the key with:")
+        _print(f"    security add-generic-password -U \\")
+        _print(f"      -s {keychain_service} -a {keychain_account} "
+               f"-w '<hex-private-key>'")
+
+    # ── TRON ─────────────────────────────────────────────────────────────
+    _heading("3. TRON network")
+    network = _ask_choice(
+        "TRON_NETWORK",
+        ("mainnet", "shasta", "nile"),
+        existing.get("TRON_NETWORK", "mainnet"),
+    )
+    api_key = _ask(
+        "TRONGRID_API_KEY (recommended — without it free tier rate-limits hit fast)",
+        existing.get("TRONGRID_API_KEY", ""),
+    )
+    while True:
+        contract = _ask(
+            "USDT_CONTRACT",
+            existing.get("USDT_CONTRACT", "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"),
+        )
+        err = _validate_tron_address(contract)
+        if not err:
+            break
+        _print(f"  ✗ {err}")
+
+    # ── Cost gates ───────────────────────────────────────────────────────
+    _heading("4. Cost / energy gates")
+    while True:
+        min_trx = _ask(
+            "MIN_TRX_RESERVE — refuse /send if treasury TRX < this",
+            existing.get("MIN_TRX_RESERVE", "50"),
+        )
+        err = _validate_decimal(min_trx, min_val=0.0)
+        if not err:
+            break
+        _print(f"  ✗ {err}")
+
+    while True:
+        max_burn = _ask(
+            "MAX_ENERGY_BURN_TRX — reject /send if estimated burn > this (0 disables)",
+            existing.get("MAX_ENERGY_BURN_TRX", "20"),
+        )
+        err = _validate_decimal(max_burn, min_val=0.0)
+        if not err:
+            break
+        _print(f"  ✗ {err}")
+
+    # ── Persistence ──────────────────────────────────────────────────────
+    _heading("5. Durable state")
+    _print("Paths can be relative — they resolve from the project root, since")
+    _print("run.sh always cd's there. Use absolute paths for production deploys.")
+    audit_log = _ask(
+        "AUDIT_LOG_FILE (durable audit trail; empty = stdout only, NOT recommended)",
+        existing.get("AUDIT_LOG_FILE", "data/audit.log"),
+    )
+    idem_db = _ask(
+        "IDEMPOTENCY_DB_PATH (SQLite; empty = in-memory, lost on restart)",
+        existing.get("IDEMPOTENCY_DB_PATH", "data/idempotency.db"),
+    )
+
+    # ── Server ───────────────────────────────────────────────────────────
+    _heading("6. Server")
+    bind = _ask("SERVER_HOST", existing.get("SERVER_HOST", "127.0.0.1"))
+    while True:
+        port = _ask("SERVER_PORT", existing.get("SERVER_PORT", "8000"))
+        err = _validate_int(port, min_val=1)
+        if not err:
+            break
+        _print(f"  ✗ {err}")
+    while True:
+        shutdown = _ask(
+            "SHUTDOWN_TIMEOUT (idle seconds before auto-shutdown; 0 to disable)",
+            existing.get("SHUTDOWN_TIMEOUT", "600"),
+        )
+        # 0 means disabled — but the validate_config() check requires ≥60. We
+        # keep the same constraint here.
+        err = _validate_int(shutdown, min_val=60)
+        if not err:
+            break
+        _print(f"  ✗ {err} (or use 0 in production via your orchestrator)")
+
+    # ── Build values dict ────────────────────────────────────────────────
+    values = dict(existing)  # preserve anything we don't touch
+    values["AUTH_TOKEN"] = token
+    values["KEY_PROVIDER"] = provider
+    values["TRON_NETWORK"] = network
+    values["TRONGRID_API_KEY"] = api_key
+    values["USDT_CONTRACT"] = contract
+    values["MIN_TRX_RESERVE"] = min_trx
+    values["MAX_ENERGY_BURN_TRX"] = max_burn
+    values["AUDIT_LOG_FILE"] = audit_log
+    values["IDEMPOTENCY_DB_PATH"] = idem_db
+    values["SERVER_HOST"] = bind
+    values["SERVER_PORT"] = port
+    values["SHUTDOWN_TIMEOUT"] = shutdown
+
+    # Provider-specific
+    for k in ("OP_VAULT", "OP_ITEM", "OP_FIELD", "PRIVATE_KEY_FILE",
+              "KEYCHAIN_SERVICE", "KEYCHAIN_ACCOUNT"):
+        values.pop(k, None)
+    if provider == "1password":
+        values["OP_VAULT"] = op_vault
+        values["OP_ITEM"] = op_item
+        values["OP_FIELD"] = op_field
+    elif provider == "file":
+        values["PRIVATE_KEY_FILE"] = pk_file
+    elif provider == "keychain":
+        values["KEYCHAIN_SERVICE"] = keychain_service
+        values["KEYCHAIN_ACCOUNT"] = keychain_account
+
+    # ── Confirm + write ──────────────────────────────────────────────────
+    _heading("Ready to write .env")
+    backup = backup_existing(ENV_PATH)
+    if backup:
+        _print(f"Existing .env will be backed up to: {backup.name}")
+    _print()
+    if not _ask_yes_no("Write .env now?", default_yes=True):
+        _print("Aborted. No changes made.")
+        return 1
+
+    write_env(ENV_PATH, values)
+    _print(f"  ✓ wrote {ENV_PATH} (mode 0600)")
+
+    # Create data dir if needed
+    for path_str in (audit_log, idem_db):
+        if path_str and not os.path.isabs(path_str):
+            parent = (PROJECT_ROOT / path_str).parent
+            if not parent.exists():
+                parent.mkdir(parents=True, exist_ok=True)
+                _print(f"  ✓ created {parent}")
+
+    _print()
+    _heading("Next steps")
+    if provider == "1password":
+        _print("  1. Make sure `op` CLI is installed and signed in:")
+        _print("     eval $(op signin)")
+    elif provider == "env":
+        _print("  1. Set PRIVATE_KEY_HEX in the environment at runtime")
+        _print("     (NOT in .env — keep it out of disk).")
+    elif provider == "file":
+        _print(f"  1. Create {pk_file} with raw hex and chmod 600.")
+    elif provider == "keychain":
+        _print("  1. Store the key in Keychain (see command above).")
+    _print("  2. Start: ./run.sh")
+    _print("  3. Smoke check: curl http://"
+           f"{bind}:{port}/api/v1/health/live")
+    _print()
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        _print("\nAborted.")
+        sys.exit(130)

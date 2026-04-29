@@ -1,14 +1,17 @@
 name: release
 
-# Triggered on tags like v0.2.0. Builds the wheel + sdist, attaches
-# them to a GitHub Release, copies the matching CHANGELOG section into
-# the release body. **Does not publish to PyPI** — distribution is
-# private (download the wheel from the GitHub Release page or
-# `pip install` from the wheel URL with appropriate auth).
+# Triggered on tags like v1.0.0. Builds the wheel + sdist, computes
+# SHA256SUMS.txt across the artefacts, attaches all three to a GitHub
+# Release, copies the matching CHANGELOG section into the release
+# body. **Does not publish to PyPI** — distribution is private; consumers
+# install via the wheel URL from the Release page (see RELEASING.md).
 
 on:
   push:
     tags: ["v*.*.*"]
+
+permissions:
+  contents: write  # for the github-release job; build is read-only
 
 jobs:
   build:
@@ -25,8 +28,8 @@ jobs:
           python -m pip install --upgrade pip build
           python -m build
 
-      # Sanity-check: tag and __version__ must agree. If they drift,
-      # users will install a misbranded wheel. Fail loud.
+      # Sanity-check: tag and __version__ must agree. Otherwise users
+      # would install a wheel whose `skr-crypto --version` lies. Fail loud.
       - name: Verify tag matches __version__
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
@@ -35,6 +38,16 @@ jobs:
             echo "::error::Tag $TAG does not match __version__ $VERSION"
             exit 1
           fi
+
+      # Produce SHA256SUMS.txt next to the artefacts. Format is the
+      # canonical `<sha256>  <basename>` per line, which sha256sum -c
+      # consumes directly. install-test.yml verifies it on a clean box.
+      - name: Compute SHA256SUMS
+        run: |
+          cd dist
+          sha256sum -- *.whl *.tar.gz > SHA256SUMS.txt
+          echo "---"
+          cat SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v8
         with:
@@ -83,5 +96,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body: ${{ steps.changelog.outputs.body }}
-          files: dist/*
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/SHA256SUMS.txt
           generate_release_notes: false
+          # Mark non-prerelease only on stable vX.Y.Z; alphas / rcs
+          # land as prerelease automatically.
+          prerelease: ${{ contains(github.ref_name, '-') }}

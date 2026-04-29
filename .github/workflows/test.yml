@@ -30,16 +30,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install package + dev deps
+      - name: Install package with all extras + dev
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[server,dev]"
 
       - name: Lint
         run: ruff check skr_crypto tests
 
       - name: Tests
-        run: pytest -v
+        run: pytest -v --ignore=tests/test_e2e_testnet.py
 
       # Verify the CLI is wired correctly post-install (catches issues
       # like a missing entry_points definition or a broken __main__).
@@ -48,6 +48,32 @@ jobs:
           skr-crypto --version
           skr-crypto help
           skr-crypto doctor --json | python -m json.tool > /dev/null
+
+      # Verify the server binary is wired correctly. We don't actually
+      # boot the service in CI (no key, no audit dir), but the entry
+      # point itself should at least answer --help.
+      - name: Smoke-test server entry point
+        run: |
+          skr-crypto-server --help
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[server,dev]"
+      - name: bandit
+        # `-ll` shows MEDIUM and HIGH only; LOW findings are reviewed
+        # offline and committed under audits/.
+        run: bandit -r skr_crypto -ll
+      - name: pip-audit
+        run: pip-audit --skip-editable
 
   changelog:
     # Every PR that touches code must also update CHANGELOG.md so the
@@ -68,8 +94,9 @@ jobs:
           base="${{ github.event.pull_request.base.sha }}"
           head="${{ github.event.pull_request.head.sha }}"
           changed=$(git diff --name-only "$base" "$head")
-          # Allowed to skip if the PR only touches docs/ or markdown.
-          if echo "$changed" | grep -qvE '^(docs/|.*\.md$|\.github/)'; then
+          # Allowed to skip if the PR only touches docs/, *.md, or
+          # the GitHub-meta dir.
+          if echo "$changed" | grep -qvE '^(docs/|runbooks/|audits/|.*\.md$|\.github/)'; then
             if ! echo "$changed" | grep -q '^CHANGELOG\.md$'; then
               echo "::error::CHANGELOG.md not updated. Add a line under [Unreleased]."
               exit 1

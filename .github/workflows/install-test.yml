@@ -1,0 +1,87 @@
+name: install-test
+
+# Verify the wheel attached to a GitHub Release actually installs in a
+# clean venv and the CLI runs. This catches the "wheel was built fine
+# in CI but won't install on a fresh box" failure mode (broken
+# entry_points, missing data files, package-find pattern mistakes).
+#
+# Triggered:
+#   - On every published Release (so we know the artifact is good
+#     before any consumer tries to install it).
+#   - Manually via workflow_dispatch (smoke a hand-built wheel).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to test (e.g. v1.0.0). Defaults to latest."
+        required: false
+
+jobs:
+  install:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Match the matrix in test.yml. Add windows-latest the day we
+        # decide to support it (today: not).
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Resolve target tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="${{ github.event.inputs.tag || github.event.release.tag_name }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(gh api repos/${{ github.repository }}/releases/latest --jq .tag_name)
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Testing tag: $TAG"
+
+      - name: Download wheel from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          gh release download "${{ steps.tag.outputs.tag }}" \
+              -R ${{ github.repository }} \
+              -p '*.whl' -p 'SHA256SUMS.txt' \
+              -D dist/
+
+      - name: Verify SHA256SUMS
+        run: |
+          cd dist
+          # SHA256SUMS.txt format is `<sha256>  <filename>` per line.
+          # Both BSD and GNU sha256sum understand it via -c.
+          if command -v sha256sum >/dev/null; then
+              sha256sum -c SHA256SUMS.txt
+          else
+              # macOS: use shasum.
+              shasum -a 256 -c SHA256SUMS.txt
+          fi
+
+      - name: Install (CLI only)
+        run: |
+          python -m venv /tmp/venv-cli
+          /tmp/venv-cli/bin/pip install --upgrade pip
+          /tmp/venv-cli/bin/pip install dist/*.whl
+          /tmp/venv-cli/bin/skr-crypto --version
+          /tmp/venv-cli/bin/skr-crypto help
+          /tmp/venv-cli/bin/skr-crypto doctor --json | python -m json.tool > /dev/null
+
+      - name: Install (server extra)
+        run: |
+          python -m venv /tmp/venv-server
+          /tmp/venv-server/bin/pip install --upgrade pip
+          /tmp/venv-server/bin/pip install "$(echo dist/*.whl)[server]"
+          /tmp/venv-server/bin/skr-crypto --version
+          /tmp/venv-server/bin/skr-crypto-server --help

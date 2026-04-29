@@ -1,7 +1,7 @@
 """Top-level CLI behaviour: --version, help, command discovery."""
 from __future__ import annotations
 
-from skr_crypto.cli import cli
+from skr_crypto.cli.main import cli
 from skr_crypto.version import __version__
 
 
@@ -25,7 +25,7 @@ def test_help_topic_dispatches(runner):
     """`skr-crypto help install` should print install's --help."""
     result = runner.invoke(cli, ["help", "install"])
     assert result.exit_code == 0
-    assert "--git-url" in result.output
+    assert "--force" in result.output
 
 
 def test_help_unknown_topic_errors(runner):

@@ -1,0 +1,79 @@
+name: Bug report
+description: Something doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, run `skr-crypto doctor` and `skr-crypto --version`.
+        For anything affecting auth, the private key, or the audit trail,
+        **don't open a public issue** — see `SECURITY.md`.
+
+  - type: input
+    id: version
+    attributes:
+      label: skr-crypto version
+      description: Output of `skr-crypto --version`.
+      placeholder: "skr-crypto, version 1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python_os
+    attributes:
+      label: Python + OS
+      description: "`python --version` and `uname -a` (or distro / Windows version)."
+      placeholder: "Python 3.12.3 on Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_tried
+    attributes:
+      label: What you tried
+      description: Exact command(s) you ran. Paste output too — including any
+                   `error:` lines on stderr.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: The actual behaviour. Quote stderr / log lines verbatim.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_expected
+    attributes:
+      label: What you expected
+      description: The behaviour the docs / `--help` promised.
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: skr-crypto doctor --json output
+      description: Paste the entire JSON output. Mask only AUTH_TOKEN if it
+                   appears (it shouldn't).
+      render: json
+    validations:
+      required: true
+
+  - type: input
+    id: regime
+    attributes:
+      label: Lifecycle regime
+      description: systemd / docker compose / direct.
+      placeholder: systemd
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Workarounds you tried, suspicions, links to related issues.

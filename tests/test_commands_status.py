@@ -5,7 +5,7 @@ import json
 
 import responses
 
-from skr_crypto.cli import cli
+from skr_crypto.cli.main import cli
 
 
 def test_status_when_not_installed(runner, tmp_path):

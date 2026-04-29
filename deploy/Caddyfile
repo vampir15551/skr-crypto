@@ -1,0 +1,58 @@
+# Reverse-proxy template for Caddy 2 — copy and replace `payouts.example.com`.
+#
+# Drop in /etc/caddy/Caddyfile (or include from your existing one), then:
+#   sudo systemctl reload caddy
+#
+# Caddy auto-provisions Let's Encrypt TLS as long as the domain points to
+# this host and ports 80/443 are reachable. AUTH_TOKEN remains the
+# application-level authn — basicauth here is a *second* gate so a leaked
+# token alone isn't enough to reach the API.
+
+payouts.example.com {
+    # Strict-Transport-Security + the usual hardening headers. Caddy
+    # ships sensible defaults; we just bump max-age and add the missing
+    # ones.
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "DENY"
+        Referrer-Policy           "no-referrer"
+        # The API is JSON-only; CSP doesn't apply, but be loud about no-cache
+        # so browser quirks don't accidentally cache responses.
+        Cache-Control             "no-store"
+        # Caddy adds Server: Caddy by default — strip it.
+        -Server
+    }
+
+    # Optional second gate: HTTP Basic auth in front of the API. Useful
+    # for /metrics and pre-auth /send dashboards. Replace the bcrypt hash
+    # with one generated via:  caddy hash-password --plaintext '<pwd>'
+    # Comment this block out to skip basicauth.
+    @api path /api/*
+    basicauth @api {
+        admin $2a$14$REPLACE_WITH_BCRYPT_HASH_FROM_caddy_hash-password
+    }
+
+    # Forward to the local Payouts container. Match the port from
+    # docker-compose.yml or the systemd unit.
+    reverse_proxy 127.0.0.1:8000 {
+        # Pass real client IP — TRUSTED_PROXIES in the service config
+        # must include 127.0.0.1 (or whichever Caddy is on) for this to
+        # be honoured.
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        # Health probe used by Caddy's circuit breaker.
+        health_uri /api/v1/health/live
+        health_interval 30s
+        health_timeout  5s
+    }
+
+    # Access log to its own file, rotated by Caddy.
+    log {
+        output file /var/log/caddy/payouts.access.log {
+            roll_size 10MiB
+            roll_keep 5
+        }
+        format json
+    }
+}

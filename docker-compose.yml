@@ -1,0 +1,62 @@
+# docker-compose.yml — single-instance deploy.
+#
+# Usage:
+#   1. Pick a key provider that does NOT require 1Password CLI inside
+#      the container. Realistic options:
+#        - KEY_PROVIDER=env  + PRIVATE_KEY_HEX  (set via secret manager)
+#        - KEY_PROVIDER=file + PRIVATE_KEY_FILE mounted read-only at chmod 600
+#   2. cp .env.example .env, fill in via scripts/setup.py or by hand.
+#   3. docker compose up -d
+#
+# Notes:
+#   - The `data` volume holds audit.log + idempotency.db. Back it up.
+#     The service refuses to broadcast if audit fsync fails (by design).
+#   - Auto-shutdown is OFF in container deploys. We rely on the
+#     orchestrator to restart on healthcheck failure instead.
+#   - If you mount a key file from the host, mount it read-only (`:ro`)
+#     and ensure host-side chmod 600. The image runs as appuser
+#     (uid 1000); the file must be readable by that uid.
+
+services:
+  skr-crypto:
+    build:
+      context: .
+      args:
+        # Capture the current git sha so /api/v1/version reports it.
+        GIT_SHA: ${GIT_SHA:-unknown}
+    image: skr-crypto:latest
+    container_name: skr-crypto
+    restart: unless-stopped
+
+    env_file:
+      - .env
+    environment:
+      # Override settings that must differ in container vs. local.
+      SERVER_HOST: 0.0.0.0
+      SKR_CRYPTO_HOME: /var/lib/skr-crypto
+      # Disable auto-shutdown; orchestrator handles lifecycle.
+      SHUTDOWN_TIMEOUT: "31536000"  # ~1 year — effectively off
+
+    ports:
+      # Bind to localhost only — Caddy / reverse proxy on the host
+      # should be the public entry point. Change to "8000:8000" only
+      # if you know what you're doing (no TLS, no auth beyond AUTH_TOKEN).
+      - "127.0.0.1:8000:8000"
+
+    volumes:
+      - ./data:/var/lib/skr-crypto/data
+      # If KEY_PROVIDER=file, mount the key like this (uncomment + adjust):
+      # - /etc/skr-crypto/treasury.key:/run/secrets/treasury.key:ro
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-s", "http://127.0.0.1:8000/api/v1/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.50"

@@ -1,0 +1,74 @@
+# systemd unit for non-Docker deploy.
+#
+# Install:
+#   sudo cp deploy/skr-crypto.service /etc/systemd/system/skr-crypto.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now skr-crypto
+#
+# Check:
+#   systemctl status skr-crypto
+#   journalctl -u skr-crypto -f
+#
+# Layout assumed:
+#   /opt/skr-crypto/venv/        ← venv with skr-crypto[server] installed
+#   /var/lib/skr-crypto/.env     ← chmod 600, owned by skr-crypto user
+#   /var/lib/skr-crypto/data/    ← audit log + idempotency db
+#
+# Pick a key provider compatible with systemd-managed services:
+#   KEY_PROVIDER=file in .env, with PRIVATE_KEY_FILE pointing to a
+#   chmod-600 file owned by the skr-crypto user. Other providers need
+#   extra wiring (1Password CLI auth, env-var injection, etc.) and are
+#   awkward under systemd.
+
+[Unit]
+Description=SKR Crypto USDT TRC-20 Treasury Service
+Documentation=https://github.com/vampir15551/skr-crypto
+After=network.target
+
+[Service]
+Type=simple
+User=skr-crypto
+Group=skr-crypto
+WorkingDirectory=/var/lib/skr-crypto
+
+# .env lives in the state directory; chmod 600 + owned by `skr-crypto`.
+EnvironmentFile=/var/lib/skr-crypto/.env
+
+# Override SHUTDOWN_TIMEOUT — systemd handles restart on its own.
+Environment=SHUTDOWN_TIMEOUT=31536000
+Environment=SKR_CRYPTO_HOME=/var/lib/skr-crypto
+
+ExecStart=/opt/skr-crypto/venv/bin/skr-crypto-server
+
+# Restart on failure, with a backoff so a poison-pill bug doesn't
+# burn CPU.
+Restart=on-failure
+RestartSec=10s
+StartLimitInterval=120s
+StartLimitBurst=5
+
+# ── Hardening ────────────────────────────────────────────────────────
+# Most of these are belt-and-braces; the real boundary is the API auth
+# + key provider. But the more we constrain the process, the smaller
+# the blast radius if it gets compromised.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# /var/lib/skr-crypto must remain writable for audit + idempotency.
+ReadWritePaths=/var/lib/skr-crypto
+
+[Install]
+WantedBy=multi-user.target

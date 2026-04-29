@@ -1,0 +1,34 @@
+# CODEOWNERS — review ownership for skr-crypto.
+#
+# Even with a single maintainer, naming ownership in a tracked file
+# makes the contract explicit: PRs that touch sensitive areas
+# (signing path, audit, idempotency) are flagged for review by the
+# right person automatically. When more contributors join, this file
+# starts paying for itself immediately.
+#
+# Pattern reference: https://docs.github.com/articles/about-code-owners
+
+# ── Default owner ─────────────────────────────────────────────────────
+*                                @vampir15551
+
+# ── Money path: signing, broadcast, key handling ───────────────────────
+# Anything here moves real funds or holds the private key. Reviews on
+# these paths must walk the entire diff with SECURITY.md and
+# GUIDELINES.md open.
+/skr_crypto/server/tron_client.py    @vampir15551
+/skr_crypto/server/key_providers.py  @vampir15551
+/skr_crypto/server/security.py       @vampir15551
+/skr_crypto/server/routes.py         @vampir15551
+/skr_crypto/server/idempotency.py    @vampir15551
+/skr_crypto/server/audit.py          @vampir15551
+/skr_crypto/server/startup_check.py  @vampir15551
+
+# ── CLI keygen + secrets-touching commands ────────────────────────────
+/skr_crypto/cli/commands/keygen.py   @vampir15551
+/skr_crypto/cli/commands/install.py  @vampir15551
+
+# ── Release pipeline + security policy ────────────────────────────────
+/.github/workflows/release.yml       @vampir15551
+/SECURITY.md                         @vampir15551
+/RELEASING.md                        @vampir15551
+/docs/adr/                           @vampir15551

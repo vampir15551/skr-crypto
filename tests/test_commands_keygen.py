@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from skr_crypto.cli import cli
+from skr_crypto.cli.main import cli
 
 
 # tronpy is heavyweight + has its own deps. Mock the minimum surface.
@@ -123,8 +123,8 @@ def test_keygen_keychain_invokes_security_tool(runner, tmp_path):
     fake_run = MagicMock(return_value=MagicMock(
         returncode=0, stdout="", stderr="",
     ))
-    with patch("skr_crypto.commands.keygen.subprocess.run", fake_run), \
-         patch("skr_crypto.commands.keygen.shutil.which",
+    with patch("skr_crypto.cli.commands.keygen.subprocess.run", fake_run), \
+         patch("skr_crypto.cli.commands.keygen.shutil.which",
                return_value="/usr/bin/security"):
         result = runner.invoke(
             cli, ["--dir", str(tmp_path / "nope"),
@@ -142,8 +142,8 @@ def test_keygen_keychain_failure_surfaces(runner, tmp_path):
     fake_run = MagicMock(return_value=MagicMock(
         returncode=1, stdout="", stderr="user denied",
     ))
-    with patch("skr_crypto.commands.keygen.subprocess.run", fake_run), \
-         patch("skr_crypto.commands.keygen.shutil.which",
+    with patch("skr_crypto.cli.commands.keygen.subprocess.run", fake_run), \
+         patch("skr_crypto.cli.commands.keygen.shutil.which",
                return_value="/usr/bin/security"):
         result = runner.invoke(
             cli, ["--dir", str(tmp_path / "nope"),

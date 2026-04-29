@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from skr_crypto.cli import cli
+from skr_crypto.cli.main import cli
 
 
 def test_doctor_runs_on_uninstalled(runner, tmp_path):

@@ -1,14 +1,14 @@
 """skr_crypto.service — regime detection."""
 from __future__ import annotations
 
-from skr_crypto import service
+from skr_crypto.cli import service
 
 
 def test_detect_compose_when_compose_file_present(tmp_path, monkeypatch):
     (tmp_path / "docker-compose.yml").write_text("services: {}\n")
 
     # Force shutil.which to find docker
-    import skr_crypto.service as svc_mod
+    import skr_crypto.cli.service as svc_mod
     monkeypatch.setattr(svc_mod.shutil, "which",
                         lambda cmd: "/usr/bin/docker" if cmd == "docker" else None)
 

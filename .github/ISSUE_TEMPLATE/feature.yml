@@ -1,0 +1,68 @@
+name: Feature request
+description: Suggest a new command, flag, or behaviour change.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Concrete scenarios beat abstract wishes. "I want to know which
+        payouts hit OUT_OF_ENERGY in the last week" is actionable.
+        "more reporting" is not.
+
+        Reminder: this CLI is **read-only on the money path**. Any
+        proposal that would let the CLI move funds will be redirected
+        to the HTTP API instead.
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: What you're trying to achieve, with one or two concrete
+                   examples.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_shape
+    attributes:
+      label: Proposed shape (optional)
+      description: |
+        If you have a CLI / API design in mind, sketch the invocation:
+
+            skr-crypto <verb> [options] [args]
+
+      render: shell
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - CLI
+        - HTTP API
+        - audit / idempotency / state stores
+        - operations / docs / runbooks
+        - CI / release pipeline
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Why not an existing surface
+      description: Could this be a flag on an existing command instead of
+                   a new top-level verb? Could it live in a runbook
+                   instead of code?
+
+  - type: checkboxes
+    id: money_safety
+    attributes:
+      label: Money-safety review
+      description: Confirm before proposing.
+      options:
+        - label: This proposal does not let the CLI move money or sign
+                 transactions.
+          required: true
+        - label: This proposal does not weaken the audit-first guarantee.
+          required: true

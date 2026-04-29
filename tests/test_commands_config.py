@@ -1,7 +1,7 @@
 """``skr-crypto config show / edit / validate``."""
 from __future__ import annotations
 
-from skr_crypto.cli import cli
+from skr_crypto.cli.main import cli
 
 
 def test_config_show_masks_secrets(runner, isolated_install):

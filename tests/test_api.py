@@ -4,8 +4,8 @@ from __future__ import annotations
 import pytest
 import responses
 
-from skr_crypto.api import APIClient
-from skr_crypto.exceptions import (
+from skr_crypto.cli.api import APIClient
+from skr_crypto.cli.exceptions import (
     AuthError,
     BadResponseError,
     ConfigError,

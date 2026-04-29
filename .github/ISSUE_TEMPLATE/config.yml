@@ -1,0 +1,10 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security disclosure
+    url: https://github.com/vampir15551/skr-crypto/security/advisories/new
+    about: Anything affecting auth, the private key, the audit trail,
+           or the read-only boundary. Do NOT open a public issue.
+  - name: Operations playbooks
+    url: https://github.com/vampir15551/skr-crypto/tree/main/runbooks
+    about: Stuck broadcast, RPC outage, key rotation, audit recovery,
+           UNRESOLVED idempotency key — read these first.

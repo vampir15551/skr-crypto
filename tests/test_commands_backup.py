@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import tarfile
 
-from skr_crypto.cli import cli
+from skr_crypto.cli.main import cli
 
 
 def test_backup_creates_archive(runner, isolated_install):

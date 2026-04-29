@@ -1,0 +1,22 @@
+.git
+.gitignore
+.idea
+.pytest_cache
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+.env
+.env.*
+!.env.example
+tests/
+scripts/
+README.md
+Makefile
+*.md
+# Keep requirements.txt and requirements.lock — Dockerfile picks one
+!requirements.txt
+!requirements.lock
