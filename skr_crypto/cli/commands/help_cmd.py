@@ -14,9 +14,9 @@ from skr_crypto.cli import output
 # cli.py. Update both when adding a new command.
 GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
     ("Lifecycle", [
-        ("install", "Clone the service from git into the install dir"),
-        ("update",  "Pull latest tagged release and restart"),
-        ("start",   "Start the installed service"),
+        ("install", "Bootstrap the install dir (interactive wizard or --yes)"),
+        ("update",  "Show the latest release wheel + how to upgrade"),
+        ("start",   "Start the installed service (systemd / docker / direct)"),
         ("stop",    "Stop the running service"),
         ("restart", "Restart the service"),
     ]),
