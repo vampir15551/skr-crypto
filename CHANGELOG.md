@@ -9,6 +9,67 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-04-29
+
+The "real AML" release. Risk preflight gains an OFAC SDN sanctions
+check (always-on, zero rate limit, local list) and an opt-in
+MistTrack AML score lookup. TronScan goes from opt-in to default-on,
+matching the existing Tier 1 TronGrid checks. Every /send now
+records the recipient's risk verdict in the audit and success log.
+
+### Added
+- **`skr_crypto.server.sanctions`** — OFAC SDN sanctions list
+  manager. Downloads the TRX-tagged list from the community-curated
+  ``0xB10C/ofac-sanctioned-digital-currency-addresses`` repo at
+  process startup, caches in memory + on disk
+  (``$SKR_CRYPTO_HOME/data/ofac-sdn-trx.txt``), falls back to the
+  cache if the URL is unreachable. Zero rate limit because checks
+  are local set-membership.
+- **New risk check `sanctions`** (Tier 1, always on) — flags any
+  recipient on the OFAC SDN list as HIGH severity. Catches the most
+  legally consequential class of address: sending USDT to an
+  OFAC-listed entity may violate US sanctions regardless of whether
+  the transaction lands on-chain.
+- **New risk check `external_misttrack`** (Tier 2, opt-in via
+  ``MISTTRACK_API_KEY``) — calls SlowMist's MistTrack
+  ``/v1/risk_score`` endpoint for real AML attribution
+  (mixers, scam interaction, hacks). Score ≥ 60 or any
+  high-severity tag → HIGH. Without an API key the check
+  cleanly SKIPs.
+- **Risk level in every /send audit + log line.** ``SEND_SUCCESS``
+  audit details now include ``risk=<low|medium|high|skipped>``;
+  ``[SEND] SUCCESS`` log line surfaces the same. Forensic search
+  for "all transfers that risk-flagged MEDIUM" is now one
+  ``grep`` away.
+- **New env vars** in `.env`:
+  - ``SANCTIONS_LIST_URL`` — override source URL for OFAC list
+  - ``SANCTIONS_LIST_REFRESH`` — set ``false`` for offline /
+    air-gapped deploys (use cached list only)
+  - ``MISTTRACK_API_KEY`` — opt in to the MistTrack tier
+- **Lifespan now refreshes sanctions list** on every server boot
+  (~1-2s, best-effort). Logged as ``[SANCTIONS] loaded N TRX
+  addresses from <url>``.
+
+### Changed
+- **`RISK_USE_EXTERNAL` defaults to `true`.** New installs and
+  existing ones that don't set the variable will now run TronScan
+  on every /send (and ``skr-crypto risk``). Adds ~300ms per /send
+  but catches community-tagged scams. Set ``RISK_USE_EXTERNAL=false``
+  in `.env` to revert to TronGrid-only.
+- The risk module now reports **eight** distinct check slots:
+  validity, burn_address, activation, smart_contract,
+  usdt_blacklist, **sanctions**, balance, external_tronscan,
+  **external_misttrack** (last two only when ``external=True``).
+
+### Security
+- The OFAC SDN check is the most important addition since the
+  Tether blacklist check in 1.2.0. Combined, /send now refuses on
+  three real classes of dangerous recipient (Tether-frozen,
+  OFAC-sanctioned, smart-contract destinations) before burning a
+  single satoshi of fee_limit.
+- Audit + scans refreshed for this release; bandit 0 high (gate
+  level), pip-audit 0 known vulnerabilities.
+
 ## [1.2.0] — 2026-04-29
 
 The "don't burn money on doomed broadcasts" release. Adds

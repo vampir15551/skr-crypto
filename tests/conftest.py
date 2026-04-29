@@ -44,6 +44,18 @@ os.environ.setdefault("RATE_LIMIT_WINDOW", "60")
 os.environ["AUDIT_LOG_FILE"] = ""
 os.environ["IDEMPOTENCY_DB_PATH"] = ""
 
+# RISK_USE_EXTERNAL defaults to true in production (1.3.0+) so
+# /send hits TronScan + (if keyed) MistTrack. Tests that want to
+# exercise external risk providers explicitly mock with `responses`;
+# everything else should not leak real HTTP. Force off here so the
+# default path stays hermetic.
+os.environ["RISK_USE_EXTERNAL"] = "false"
+os.environ["MISTTRACK_API_KEY"] = ""
+# Sanctions list is fetched on lifespan startup; tests bypass the
+# lifespan but the URL refresh in conftest's mock_tron fixture would
+# still hit the network if SANCTIONS_LIST_REFRESH=true. Lock down.
+os.environ["SANCTIONS_LIST_REFRESH"] = "false"
+
 import pytest  # noqa: E402
 from click.testing import CliRunner  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

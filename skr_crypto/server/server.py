@@ -64,6 +64,16 @@ async def lifespan(_app: FastAPI):
     tron.init()
     mark_started()
     reset_timer()
+    # Refresh the OFAC SDN sanctions list (best-effort). The list is
+    # cached in memory for the process lifetime; refresh happens on
+    # next process start. If the network is down or the URL changed,
+    # we still come up — the sanctions check just SKIPs until next
+    # successful refresh.
+    try:
+        from skr_crypto.server import sanctions
+        sanctions.load()
+    except Exception as exc:
+        log.warning("Sanctions list load failed: %s", exc)
     # Reconcile prior runs' SEND_SUCCESS records with on-chain state and
     # flag same-day duplicate recipients before accepting traffic.
     # Best-effort — never blocks startup. Imported lazily so an import-time

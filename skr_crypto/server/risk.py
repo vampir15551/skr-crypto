@@ -156,13 +156,21 @@ def assess_risk(address: str, *, external: bool = False) -> RiskReport:
     checks.append(_check_smart_contract(tron, address))
     checks.append(_check_usdt_blacklist(tron, address))
 
+    # 5. OFAC SDN sanctions — always on, local list, no rate limit.
+    checks.append(_check_sanctions(address))
+
     balance, balance_summary = _check_balance(tron, address)
     checks.append(balance)
     summary.update(balance_summary)
 
-    # 6. External (opt-in).
+    # 6. External providers (opt-in via the `external` arg).
     if external:
         checks.append(_check_external_tronscan(address))
+        # MistTrack only fires if the operator set MISTTRACK_API_KEY.
+        # We always include the slot in the report so the operator can
+        # tell whether they configured it; "skipped, no key" is the
+        # default message.
+        checks.append(_check_external_misttrack(address))
 
     return RiskReport(
         address=address,
@@ -351,6 +359,119 @@ def _check_balance(tron, address: str) -> tuple[RiskCheck, dict[str, Any]]:
     if summary["warmth"] == "cold":
         msg += " (USDT cold — first transfer will need ~32k energy)"
     return RiskCheck("balance", CheckStatus.OK, msg), summary
+
+
+def _check_sanctions(address: str) -> RiskCheck:
+    """OFAC SDN list match. Local check — zero network, zero limits.
+
+    The list is loaded by ``skr_crypto.server.sanctions.load()`` at
+    server startup (see ``server.py`` lifespan). If it isn't loaded
+    (e.g. boot couldn't reach GitHub for fresh data and no on-disk
+    cache exists), this check returns SKIP rather than fail-open —
+    the audit log will reflect "we couldn't tell".
+
+    Match = HIGH severity. Sanctioned addresses are the most legally
+    consequential class of recipient: sending USDT there could put
+    the operator in violation of OFAC.
+    """
+    from skr_crypto.server import sanctions
+
+    matched = sanctions.contains(address)
+    if matched is None:
+        return RiskCheck(
+            "sanctions",
+            CheckStatus.SKIP,
+            "OFAC SDN list not loaded — re-check `sanctions.status()` "
+            "and ensure SANCTIONS_LIST_URL was reachable at boot",
+        )
+    if matched:
+        return RiskCheck(
+            "sanctions",
+            CheckStatus.FAIL,
+            "address is on the OFAC SDN sanctions list — sending here "
+            "may violate US sanctions, regardless of whether the "
+            "transaction lands on-chain",
+            "high",
+        )
+    return RiskCheck(
+        "sanctions",
+        CheckStatus.OK,
+        "not on OFAC SDN sanctions list",
+    )
+
+
+def _check_external_misttrack(
+    address: str, *, timeout: float = 5.0,
+) -> RiskCheck:
+    """MistTrack (SlowMist) AML risk score. Opt-in via MISTTRACK_API_KEY.
+
+    Their free tier covers basic risk-score lookups for TRON addresses
+    with mixer / scam / hack-proceeds attribution. Without an API key
+    we just SKIP the check rather than degrading the operator's daily
+    quota by guessing.
+
+    Endpoint: ``/v1/risk_score`` returns a numeric ``score`` (0-100)
+    and a list of ``risk_detail`` tags. We treat ``score >= 60`` or
+    any "high"-severity tag as FAIL.
+    """
+    from skr_crypto.server.config import MISTTRACK_API_KEY
+
+    if not MISTTRACK_API_KEY:
+        return RiskCheck(
+            "external_misttrack",
+            CheckStatus.SKIP,
+            "MISTTRACK_API_KEY not set — skipping AML lookup",
+        )
+
+    url = f"https://openapi.misttrack.io/v1/risk_score?coin=TRX&address={address}"
+    try:
+        response = requests.get(
+            url,
+            timeout=timeout,
+            headers={
+                "API-KEY": MISTTRACK_API_KEY,
+                "User-Agent": "skr-crypto-risk/1",
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+    except Exception as exc:
+        return RiskCheck(
+            "external_misttrack",
+            CheckStatus.SKIP,
+            f"MistTrack unreachable: {type(exc).__name__}",
+        )
+
+    payload = data.get("data") or {}
+    score = payload.get("score")
+    detail = payload.get("risk_detail") or []
+    high_tags = [
+        d.get("label", "?")
+        for d in detail
+        if isinstance(d, dict) and d.get("type", "").lower() in ("high", "fatal")
+    ]
+
+    # Build a short summary string for the message.
+    score_str = f"score={score}" if score is not None else "score=?"
+    if high_tags:
+        return RiskCheck(
+            "external_misttrack",
+            CheckStatus.FAIL,
+            f"MistTrack {score_str} high-severity tags: {', '.join(high_tags)}",
+            "high",
+        )
+    if isinstance(score, (int, float)) and score >= 60:
+        return RiskCheck(
+            "external_misttrack",
+            CheckStatus.FAIL,
+            f"MistTrack {score_str} (>=60 considered risky)",
+            "high",
+        )
+    return RiskCheck(
+        "external_misttrack",
+        CheckStatus.OK,
+        f"MistTrack {score_str}, no high-severity tags",
+    )
 
 
 def _check_external_tronscan(

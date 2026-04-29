@@ -1,8 +1,10 @@
 """Unit tests for ``skr_crypto.server.risk``.
 
 The TronClient singleton is patched with ``mock_tron`` so no real
-RPCs leave the test process. TronScan calls (Tier 2) are stubbed via
-``responses``.
+RPCs leave the test process. TronScan and MistTrack calls (external
+tier) are stubbed via ``responses``. The OFAC sanctions list is
+overridden with ``sanctions._override_for_tests`` to keep boot fast
+and the test result deterministic.
 """
 from __future__ import annotations
 
@@ -12,6 +14,7 @@ from unittest.mock import MagicMock
 import pytest
 import responses
 
+from skr_crypto.server import sanctions
 from skr_crypto.server.risk import (
     CheckStatus,
     RiskLevel,
@@ -21,6 +24,15 @@ from skr_crypto.server.risk import (
 
 VALID = "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL"
 NULL_TRON = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb"
+SANCTIONED = "TSanctionedAddrXXXXXXXXXXXXXXXXXXX"
+
+
+@pytest.fixture(autouse=True)
+def _reset_sanctions():
+    """Each test gets a fresh, empty sanctions list. Override per-test."""
+    sanctions._override_for_tests(set())
+    yield
+    sanctions._override_for_tests(None)
 
 
 # ---------------------------------------------------------------------------
@@ -184,6 +196,55 @@ class TestSmartContract:
 
 
 # ---------------------------------------------------------------------------
+# OFAC SDN sanctions list (always-on, local)
+# ---------------------------------------------------------------------------
+
+
+class TestSanctions:
+    def _setup_clean(self, mock_tron):
+        mock_tron.client.get_account = MagicMock(return_value={
+            "create_time": 1700000000_000,
+        })
+        mock_tron.client.get_contract = MagicMock(side_effect=Exception())
+        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(
+            return_value=False,
+        )
+        mock_tron.get_destination_info = MagicMock(return_value={
+            "exists": True, "trx_balance": Decimal("1"), "usdt_balance": Decimal("0"),
+        })
+
+    def test_sanctioned_address_blocks_high(self, mock_tron):
+        # Has to use a *valid* TRON address — sanctioned-but-malformed
+        # would short-circuit on the validity check before sanctions run.
+        # Imagine VALID is on the SDN list.
+        self._setup_clean(mock_tron)
+        sanctions._override_for_tests({VALID})
+        report = assess_risk(VALID)
+        s = next(c for c in report.checks if c.name == "sanctions")
+        assert s.status is CheckStatus.FAIL
+        assert s.severity == "high"
+        assert "OFAC" in s.message
+        assert report.level is RiskLevel.HIGH
+
+    def test_clean_address_passes(self, mock_tron):
+        self._setup_clean(mock_tron)
+        sanctions._override_for_tests({"TSomeOtherSanctionedAddr"})
+        report = assess_risk(VALID)
+        s = next(c for c in report.checks if c.name == "sanctions")
+        assert s.status is CheckStatus.OK
+        assert report.level is RiskLevel.LOW
+
+    def test_unloaded_list_skips_not_fails(self, mock_tron):
+        self._setup_clean(mock_tron)
+        sanctions._override_for_tests(None)
+        report = assess_risk(VALID)
+        s = next(c for c in report.checks if c.name == "sanctions")
+        assert s.status is CheckStatus.SKIP
+        # SKIP doesn't bump the level on its own.
+        assert report.level is not RiskLevel.HIGH
+
+
+# ---------------------------------------------------------------------------
 # External (Tier 2) — TronScan
 # ---------------------------------------------------------------------------
 
@@ -244,6 +305,134 @@ class TestExternalTronScan:
         report = assess_risk(VALID, external=False)
         names = [c.name for c in report.checks]
         assert "external_tronscan" not in names
+
+
+# ---------------------------------------------------------------------------
+# External (Tier 2) — MistTrack
+# ---------------------------------------------------------------------------
+
+
+class TestExternalMistTrack:
+    def _setup_clean(self, mock_tron):
+        mock_tron.client.get_account = MagicMock(return_value={"create_time": 1700000000_000})
+        mock_tron.client.get_contract = MagicMock(side_effect=Exception())
+        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+        mock_tron.get_destination_info = MagicMock(return_value={
+            "exists": True, "trx_balance": Decimal("1"), "usdt_balance": Decimal("0"),
+        })
+
+    def test_misttrack_skipped_without_api_key(self, mock_tron, monkeypatch):
+        self._setup_clean(mock_tron)
+        # Empty key — check should SKIP.
+        from skr_crypto.server import config as srv_config
+        monkeypatch.setattr(srv_config, "MISTTRACK_API_KEY", "")
+        responses.add(
+            responses.GET,
+            f"https://apilist.tronscanapi.com/api/security/account/data?address={VALID}",
+            json={}, status=200,
+        )
+        with responses.RequestsMock(assert_all_requests_are_fired=False) as rmock:
+            rmock.add(
+                responses.GET,
+                f"https://apilist.tronscanapi.com/api/security/account/data?address={VALID}",
+                json={}, status=200,
+            )
+            report = assess_risk(VALID, external=True)
+        m = next(c for c in report.checks if c.name == "external_misttrack")
+        assert m.status is CheckStatus.SKIP
+        assert "MISTTRACK_API_KEY" in m.message
+
+    @responses.activate
+    def test_misttrack_high_score_blocks(self, mock_tron, monkeypatch):
+        self._setup_clean(mock_tron)
+        from skr_crypto.server import config as srv_config
+        monkeypatch.setattr(srv_config, "MISTTRACK_API_KEY", "secret-key")
+        # TronScan first (no flags)
+        responses.add(
+            responses.GET,
+            f"https://apilist.tronscanapi.com/api/security/account/data?address={VALID}",
+            json={}, status=200,
+        )
+        # MistTrack: high score
+        responses.add(
+            responses.GET,
+            f"https://openapi.misttrack.io/v1/risk_score?coin=TRX&address={VALID}",
+            json={"data": {"score": 87, "risk_detail": []}},
+            status=200,
+        )
+        report = assess_risk(VALID, external=True)
+        m = next(c for c in report.checks if c.name == "external_misttrack")
+        assert m.status is CheckStatus.FAIL
+        assert m.severity == "high"
+        assert "87" in m.message
+        assert report.level is RiskLevel.HIGH
+
+    @responses.activate
+    def test_misttrack_high_severity_tag_blocks(self, mock_tron, monkeypatch):
+        self._setup_clean(mock_tron)
+        from skr_crypto.server import config as srv_config
+        monkeypatch.setattr(srv_config, "MISTTRACK_API_KEY", "secret-key")
+        responses.add(
+            responses.GET,
+            f"https://apilist.tronscanapi.com/api/security/account/data?address={VALID}",
+            json={}, status=200,
+        )
+        responses.add(
+            responses.GET,
+            f"https://openapi.misttrack.io/v1/risk_score?coin=TRX&address={VALID}",
+            json={"data": {
+                "score": 30,
+                "risk_detail": [
+                    {"label": "Mixer Interaction", "type": "high"},
+                    {"label": "Low score signal", "type": "low"},
+                ],
+            }},
+            status=200,
+        )
+        report = assess_risk(VALID, external=True)
+        m = next(c for c in report.checks if c.name == "external_misttrack")
+        assert m.status is CheckStatus.FAIL
+        assert "Mixer Interaction" in m.message
+        assert report.level is RiskLevel.HIGH
+
+    @responses.activate
+    def test_misttrack_low_score_passes(self, mock_tron, monkeypatch):
+        self._setup_clean(mock_tron)
+        from skr_crypto.server import config as srv_config
+        monkeypatch.setattr(srv_config, "MISTTRACK_API_KEY", "secret-key")
+        responses.add(
+            responses.GET,
+            f"https://apilist.tronscanapi.com/api/security/account/data?address={VALID}",
+            json={}, status=200,
+        )
+        responses.add(
+            responses.GET,
+            f"https://openapi.misttrack.io/v1/risk_score?coin=TRX&address={VALID}",
+            json={"data": {"score": 5, "risk_detail": []}},
+            status=200,
+        )
+        report = assess_risk(VALID, external=True)
+        m = next(c for c in report.checks if c.name == "external_misttrack")
+        assert m.status is CheckStatus.OK
+
+    @responses.activate
+    def test_misttrack_unreachable_skips(self, mock_tron, monkeypatch):
+        self._setup_clean(mock_tron)
+        from skr_crypto.server import config as srv_config
+        monkeypatch.setattr(srv_config, "MISTTRACK_API_KEY", "secret-key")
+        responses.add(
+            responses.GET,
+            f"https://apilist.tronscanapi.com/api/security/account/data?address={VALID}",
+            json={}, status=200,
+        )
+        responses.add(
+            responses.GET,
+            f"https://openapi.misttrack.io/v1/risk_score?coin=TRX&address={VALID}",
+            status=503, body="bzzzt",
+        )
+        report = assess_risk(VALID, external=True)
+        m = next(c for c in report.checks if c.name == "external_misttrack")
+        assert m.status is CheckStatus.SKIP
 
 
 # ---------------------------------------------------------------------------

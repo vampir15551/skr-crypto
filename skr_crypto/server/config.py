@@ -101,12 +101,39 @@ RISK_BLOCK_LEVEL: str = os.getenv("RISK_BLOCK_LEVEL", "high").strip().lower()
 
 # Whether the /send preflight (and `skr-crypto risk` without --external)
 # also queries the external reputation source (TronScan). Adds ~1 HTTP
-# call (~200-500ms) per /send. Default off — TronGrid-side checks
-# already catch the dangerous classes (Tether blacklist, smart-contract
-# destination, burn pattern).
+# call (~200-500ms) per /send. Default ON since 1.3.0 — community
+# scam tags catch a real class of operator mistakes.
 RISK_USE_EXTERNAL: bool = os.getenv(
-    "RISK_USE_EXTERNAL", "false",
+    "RISK_USE_EXTERNAL", "true",
 ).strip().lower() in ("1", "true", "yes", "on")
+
+# OFAC SDN sanctions list (always-on, no rate limit because local).
+# - SANCTIONS_LIST_URL: where to fetch fresh data on startup. Defaults to
+#   the community-maintained 0xB10C/ofac-sanctioned-digital-currency-addresses
+#   repo, which is auto-updated whenever Treasury publishes new SDNs.
+# - SANCTIONS_LIST_REFRESH: when False, skip the network fetch and use
+#   the on-disk cache (for offline / air-gapped deploys).
+SANCTIONS_LIST_URL: str = os.getenv(
+    "SANCTIONS_LIST_URL",
+    "https://raw.githubusercontent.com/0xB10C/"
+    "ofac-sanctioned-digital-currency-addresses/lists/"
+    "sanctioned_addresses_TRX.txt",
+)
+SANCTIONS_LIST_REFRESH: bool = os.getenv(
+    "SANCTIONS_LIST_REFRESH", "true",
+).strip().lower() in ("1", "true", "yes", "on")
+
+# MistTrack (SlowMist) — opt-in AML provider. When the env var is set,
+# the risk module queries their /v1/risk_score endpoint. Free tier has
+# a low daily limit (~100/day for unkeyed; higher with key) — enable
+# only if you actually need the extra signal beyond OFAC + TronScan.
+MISTTRACK_API_KEY: str = os.getenv("MISTTRACK_API_KEY", "")
+
+# Root state directory. Same name as the CLI's $SKR_CRYPTO_HOME — the
+# sanctions-list cache and any future per-install state lands under
+# this root's data/. Falls through to "" so callers can detect the
+# unset case and use ~/.skr-crypto themselves.
+SKR_CRYPTO_HOME: str = os.getenv("SKR_CRYPTO_HOME", "")
 
 # ---------------------------------------------------------------------------
 # Audit

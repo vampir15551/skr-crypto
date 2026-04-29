@@ -80,15 +80,21 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
     _validate_tron_address(req.to_address)
 
     # ── Recipient risk preflight ─────────────────────────────────────────
-    # Catches Tether-blacklisted addresses, smart-contract destinations,
-    # known-burn patterns, and unactivated accounts BEFORE we burn fee
-    # limit on a doomed broadcast. Configurable via RISK_BLOCK_LEVEL
-    # (high / medium / none) and RISK_USE_EXTERNAL (TronScan).
+    # Catches OFAC-sanctioned addresses, Tether blacklist, smart-contract
+    # destinations, known-burn patterns, and unactivated accounts BEFORE
+    # we burn fee_limit on a doomed broadcast. Configurable via
+    # RISK_BLOCK_LEVEL (high / medium / none) and RISK_USE_EXTERNAL
+    # (TronScan + MistTrack-if-keyed). The level is propagated through
+    # to the SEND_SUCCESS audit and SUCCESS log line so post-mortem
+    # forensics can see every transfer's risk verdict.
+    risk_report = None
+    risk_level_str = "skipped"
     if RISK_BLOCK_LEVEL != "none":
         risk_report = assess_risk(req.to_address, external=RISK_USE_EXTERNAL)
+        risk_level_str = risk_report.level.value
         log.info(
             "[SEND] Risk | level=%s checks=%s",
-            risk_report.level.value,
+            risk_level_str,
             ",".join(
                 f"{c.name}:{c.status.value}"
                 for c in risk_report.checks
@@ -108,13 +114,13 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                 client_ip=client_ip,
                 result="risk_too_high",
                 details=(
-                    f"level={risk_report.level.value} "
+                    f"level={risk_level_str} "
                     f"failed={','.join(failed) or 'none'}"
                 ),
             )
             metrics.tx_rejected_total.labels(reason="risk_too_high").inc()
             raise RiskTooHigh(
-                level=risk_report.level.value,
+                level=risk_level_str,
                 report=risk_report.to_dict(),
             )
 
@@ -329,12 +335,12 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
         idempotency_key=req.idempotency_key,
         client_ip=client_ip,
         result="broadcast",
-        details=f"elapsed={elapsed:.2f}s",
+        details=f"elapsed={elapsed:.2f}s risk={risk_level_str}",
     )
 
     log.info(
-        "[SEND] SUCCESS | txid=%s %s -> %s amount=%s USDT elapsed=%.2fs",
-        txid, tron.address, req.to_address, amount, elapsed,
+        "[SEND] SUCCESS | txid=%s %s -> %s amount=%s USDT risk=%s elapsed=%.2fs",
+        txid, tron.address, req.to_address, amount, risk_level_str, elapsed,
     )
 
     metrics.tx_broadcast_total.labels(result="success").inc()
