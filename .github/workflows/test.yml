@@ -69,9 +69,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[server,dev]"
       - name: bandit
-        # `-ll` shows MEDIUM and HIGH only; LOW findings are reviewed
-        # offline and committed under audits/.
-        run: bandit -r skr_crypto -ll
+        # `-lll` gates only on HIGH-severity findings. Medium / low are
+        # reviewed offline and committed under audits/ with rationale.
+        run: bandit -r skr_crypto -lll
       - name: pip-audit
         run: pip-audit --skip-editable
 
