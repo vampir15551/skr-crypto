@@ -25,21 +25,37 @@ from rich.table import Table
 _out = Console()
 _err = Console(stderr=True)
 
+# `--quiet` at the root suppresses info() / success() but keeps warn() /
+# error() — those carry actionable signal.
+_QUIET = False
+
+
+def set_quiet(flag: bool) -> None:
+    global _QUIET
+    _QUIET = flag
+
 
 def info(msg: str) -> None:
-    """Status update / progress. Goes to stderr."""
+    """Status update / progress. Goes to stderr. Suppressed by --quiet."""
+    if _QUIET:
+        return
     _err.print(msg)
 
 
 def warn(msg: str) -> None:
+    """Always shown — actionable warning."""
     _err.print(f"[yellow]warning:[/yellow] {msg}")
 
 
 def error(msg: str) -> None:
+    """Always shown — actionable error."""
     _err.print(f"[red]error:[/red] {msg}")
 
 
 def success(msg: str) -> None:
+    """Operational success line. Suppressed by --quiet."""
+    if _QUIET:
+        return
     _err.print(f"[green]✓[/green] {msg}")
 
 
@@ -80,3 +96,41 @@ def confirm(prompt: str, *, default: bool = False) -> bool:
     if not ans:
         return default
     return ans in ("y", "yes")
+
+
+def ask(prompt: str, *, default: str | None = None, secret: bool = False) -> str:
+    """Free-text prompt. Empty input returns ``default``. ``secret=True``
+    suppresses echo (used for API keys / token paste).
+
+    On EOF (e.g. piped script with no input) returns ``default``; if
+    no default is set and EOF arrives, returns "" so callers can detect
+    the non-interactive case via ``ask(..., default="") == ""``.
+    """
+    suffix = f" [{default}]" if default else ""
+    try:
+        if secret:
+            import getpass
+            value = getpass.getpass(f"{prompt}{suffix}: ")
+        else:
+            value = input(f"{prompt}{suffix}: ")
+    except EOFError:
+        return default or ""
+    value = value.strip()
+    return value if value else (default or "")
+
+
+def ask_choice(prompt: str, choices: tuple[str, ...], default: str) -> str:
+    """Constrained prompt: keep asking until the answer is in ``choices``.
+
+    Renders as ``prompt (a/b/c)`` with the default underlined via
+    asterisks (``*default*``) since ``input()`` doesn't render Rich
+    markup.
+    """
+    while True:
+        rendered = "/".join(
+            f"*{c}*" if c == default else c for c in choices
+        )
+        chosen = ask(f"{prompt} ({rendered})", default=default).lower()
+        if chosen in choices:
+            return chosen
+        warn(f"must be one of: {', '.join(choices)}")

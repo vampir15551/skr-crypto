@@ -38,10 +38,28 @@ PORT="${PORT:-8000}"
 # ── Optional: Cloudflare quick tunnel ────────────────────────────────
 # `cloudflared tunnel --url http://localhost:$PORT` gives a temporary
 # public https URL. Useful for testing webhooks from a partner who
-# can't reach your laptop. Disable with NO_TUNNEL=1.
+# can't reach your laptop.
+#
+# Source of truth, in order:
+#   1. NO_TUNNEL=1 in env  →  always disabled (escape hatch)
+#   2. TUNNEL_ENABLED in env or .env  →  "1"/"true"/"yes" enables, else off
+#   3. cloudflared on PATH and TUNNEL_ENABLED unset  →  enabled (legacy default)
+TUNNEL_PREF="${TUNNEL_ENABLED:-}"
+if [[ -z "$TUNNEL_PREF" && -f .env ]]; then
+    TUNNEL_PREF="$(grep -E '^TUNNEL_ENABLED=' .env | tail -n1 | cut -d= -f2 | tr -d '"' | tr -d "'" || true)"
+fi
+TUNNEL_PREF="${TUNNEL_PREF,,}"
+
+WANT_TUNNEL=1
+if [[ "${NO_TUNNEL:-}" == "1" ]]; then
+    WANT_TUNNEL=0
+elif [[ "$TUNNEL_PREF" =~ ^(0|false|no|off)$ ]]; then
+    WANT_TUNNEL=0
+fi
+
 CF_PID=""
 CF_LOG=""
-if [[ "${NO_TUNNEL:-}" != "1" ]] && command -v cloudflared >/dev/null 2>&1; then
+if [[ "$WANT_TUNNEL" == "1" ]] && command -v cloudflared >/dev/null 2>&1; then
     CF_LOG="$(mktemp -t cloudflared.XXXXXX.log)"
     cloudflared tunnel --no-autoupdate --url "http://localhost:${PORT}" \
         >"$CF_LOG" 2>&1 &
@@ -76,11 +94,11 @@ if [[ "${NO_TUNNEL:-}" != "1" ]] && command -v cloudflared >/dev/null 2>&1; then
     else
         echo "WARNING: Cloudflare tunnel URL not detected — see $CF_LOG"
     fi
-elif [[ "${NO_TUNNEL:-}" == "1" ]]; then
-    : # explicitly disabled, no message
+elif [[ "$WANT_TUNNEL" == "0" ]]; then
+    : # explicitly disabled (TUNNEL_ENABLED=0 in .env, or NO_TUNNEL=1) — no message
 elif ! command -v cloudflared >/dev/null 2>&1; then
     echo "Note: cloudflared not installed — skipping public tunnel."
-    echo "      brew install cloudflared   (or set NO_TUNNEL=1 to silence)"
+    echo "      brew install cloudflared   (or set TUNNEL_ENABLED=0 in .env)"
 fi
 
 # ── Start the service ────────────────────────────────────────────────

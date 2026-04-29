@@ -1,4 +1,4 @@
-Run started:2026-04-29 14:20:02.375337+00:00
+Run started:2026-04-29 14:53:25.263063+00:00
 
 Test results:
 >> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
@@ -23,19 +23,19 @@ Test results:
 --------------------------------------------------
 
 Code scanned:
-	Total lines of code: 4052
+	Total lines of code: 4402
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 1
 
 Run metrics:
 	Total issues (by severity):
 		Undefined: 0
-		Low: 40
+		Low: 42
 		Medium: 2
 		High: 0
 	Total issues (by confidence):
 		Undefined: 0
 		Low: 0
 		Medium: 2
-		High: 40
+		High: 42
 Files skipped (0):

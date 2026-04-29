@@ -40,7 +40,8 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("restore", "Restore from a backup archive"),
     ]),
     ("Diagnostics", [
-        ("doctor",  "Walk through environment checks (like brew doctor)"),
+        ("doctor",     "Walk through environment checks (like brew doctor)"),
+        ("completion", "Print a shell-completion script (bash / zsh / fish)"),
     ]),
     ("Help", [
         ("help",    "This screen"),

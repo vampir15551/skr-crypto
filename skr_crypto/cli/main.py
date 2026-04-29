@@ -36,10 +36,20 @@ from skr_crypto.version import __version__
     type=click.Path(file_okay=False),
     help="Install dir (default: ~/.skr-crypto, or $SKR_CRYPTO_HOME).",
 )
+@click.option(
+    "-q", "--quiet", is_flag=True, default=False,
+    help="Suppress informational and success lines on stderr. "
+         "Errors and warnings still print. Useful for CI / scripts.",
+)
 @click.pass_context
-def cli(ctx: click.Context, install_dir: str | None) -> None:
+def cli(ctx: click.Context, install_dir: str | None, quiet: bool) -> None:
     ctx.ensure_object(dict)
     ctx.obj["install_dir"] = install_dir
+    ctx.obj["quiet"] = quiet
+    if quiet:
+        # output.info / output.success route through this flag.
+        from skr_crypto.cli import output
+        output.set_quiet(True)
 
 
 def _register() -> None:
@@ -50,6 +60,7 @@ def _register() -> None:
         backup,
         balance,
         check_tx,
+        completion,
         config_cmd,
         doctor,
         help_cmd,
@@ -80,6 +91,7 @@ def _register() -> None:
     cli.add_command(backup.cmd)
     cli.add_command(restore.cmd)
     cli.add_command(doctor.cmd)
+    cli.add_command(completion.cmd)
     cli.add_command(version_cmd.cmd)
     cli.add_command(help_cmd.cmd)
 

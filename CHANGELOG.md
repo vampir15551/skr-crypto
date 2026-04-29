@@ -9,6 +9,52 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-04-29
+
+Operator-experience release: `skr-crypto install` is now a real
+wizard with full automation flags, the Cloudflare tunnel is a
+first-class setting in `.env` (no more env-var dance), and tab
+completion for bash / zsh / fish ships with the package.
+
+### Added
+- **`skr-crypto install` wizard.** Interactive by default when STDIN
+  is a TTY; falls through to defaults under `--yes` for automation.
+  Every prompt has an explicit flag — combine them freely:
+  `--key-provider`, `--network`, `--trongrid-api-key`, `--bind-host`,
+  `--bind-port`, `--tunnel/--no-tunnel`, `--gen-key`. Force the
+  wizard with `--interactive`. Pass `--force` to wipe an existing
+  install (with confirmation in interactive mode).
+- **`TUNNEL_ENABLED` in `.env`.** First-class setting written by
+  `install`. `run.sh` reads it (in addition to the `NO_TUNNEL=1`
+  override env var) and starts the Cloudflare quick-tunnel
+  accordingly. No more "I forgot to export NO_TUNNEL".
+- **`--gen-key` flag on install.** Chains into `skr-crypto keygen`
+  immediately after writing `.env`. The interactive wizard also asks
+  about it explicitly.
+- **`skr-crypto completion bash|zsh|fish`.** Prints a Click-generated
+  shell-completion script. `skr-crypto completion zsh >> ~/.zshrc`
+  and tab-complete works for every command, flag, and option.
+- **`-q, --quiet` root flag.** Suppresses informational and success
+  lines on stderr. Errors and warnings still print. Useful for CI /
+  automation where you only care about the exit code.
+- **`output.ask` / `output.ask_choice`** helpers for prompts that
+  honour TTY detection and EOF cleanly.
+
+### Changed
+- **`install` no longer takes `--from-path`, `--no-deps`, `--git-url`,
+  `--ref`** — these were removed in 1.0.0 but the help text still
+  hinted at them in places. Stripped completely.
+- The wizard prints provider-specific next-steps after install
+  (different hint for `env` vs `file` vs `1password` vs `keychain`).
+- `run.sh` now reads `TUNNEL_ENABLED` from `.env` before deciding
+  whether to spawn `cloudflared`. Existing `NO_TUNNEL=1` env var is
+  still honoured as an emergency override.
+
+### Security
+- No new findings. `bandit` 0 high (gate level), `pip-audit` 0 known
+  vulnerabilities. Reports under `audits/bandit-2026-04-29.txt` and
+  `audits/pip-audit-2026-04-29.json` refreshed for this release.
+
 ## [1.0.0] — 2026-04-29
 
 This release **merges the previously-separate `skr-crypto` (CLI) and
