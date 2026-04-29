@@ -25,6 +25,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("logs",    "Tail recent logs (follow with -f)"),
         ("balance", "TRX/USDT balances + on-chain resources"),
         ("check",   "Look up a tx hash on-chain (read-only)"),
+        ("risk",    "Wallet-risk preflight (Tether blacklist, contract, burn)"),
         ("audit",   "Browse the service's audit log"),
         ("reconcile", "Re-run the startup-check on demand"),
         ("version", "CLI version + service version"),

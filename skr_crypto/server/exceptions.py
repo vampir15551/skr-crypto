@@ -58,3 +58,27 @@ class EnergyTooExpensive(PayoutError):
             f"({max_burn_trx} TRX) — stake TRX or rent energy",
             code="ENERGY_TOO_EXPENSIVE",
         )
+
+
+class RiskTooHigh(PayoutError):
+    """Recipient address tripped the wallet-risk preflight at or above
+    the configured ``RISK_BLOCK_LEVEL``.
+
+    The full report is attached as ``self.report`` (a dict) so the
+    error handler can surface the failed checks back to the client.
+    Operators inspect ``skr-crypto risk <addr>`` for the same data.
+    """
+
+    def __init__(self, level: str, report: dict):
+        self.level = level
+        self.report = report
+        failed = [
+            c["name"]
+            for c in report.get("checks", [])
+            if c.get("status") == "fail"
+        ]
+        detail = "; ".join(failed) if failed else "no failed checks"
+        super().__init__(
+            f"Recipient risk {level.upper()} — refusing to broadcast. Failed: {detail}",
+            code="RISK_TOO_HIGH",
+        )

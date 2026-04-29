@@ -69,6 +69,7 @@ def _register() -> None:
         logs,
         reconcile,
         restore,
+        risk,
         start_stop,
         status,
         update,
@@ -84,6 +85,7 @@ def _register() -> None:
     cli.add_command(logs.cmd)
     cli.add_command(balance.cmd)
     cli.add_command(check_tx.cmd)
+    cli.add_command(risk.cmd)
     cli.add_command(audit.cmd)
     cli.add_command(reconcile.cmd)
     cli.add_command(config_cmd.config_group)

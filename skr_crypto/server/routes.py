@@ -10,12 +10,19 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 
 from skr_crypto.server import audit, metrics
-from skr_crypto.server.config import MAX_ENERGY_BURN_TRX, MIN_TRX_RESERVE, TRON_NETWORK
+from skr_crypto.server.config import (
+    MAX_ENERGY_BURN_TRX,
+    MIN_TRX_RESERVE,
+    RISK_BLOCK_LEVEL,
+    RISK_USE_EXTERNAL,
+    TRON_NETWORK,
+)
 from skr_crypto.server.exceptions import (
     EnergyTooExpensive,
     InsufficientBalance,
     InvalidAddress,
     PayoutError,
+    RiskTooHigh,
     TransactionFailed,
 )
 from skr_crypto.server.idempotency import idempotency
@@ -28,6 +35,7 @@ from skr_crypto.server.models import (
     VersionResponse,
 )
 from skr_crypto.server.net import client_address
+from skr_crypto.server.risk import assess_risk, should_block
 from skr_crypto.server.security import verify_api_key
 from skr_crypto.server.shutdown import seconds_remaining, uptime
 from skr_crypto.server.tron_client import tron
@@ -70,6 +78,45 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
     # Done before reserving the idempotency slot so a malformed address
     # never poisons the store.
     _validate_tron_address(req.to_address)
+
+    # ── Recipient risk preflight ─────────────────────────────────────────
+    # Catches Tether-blacklisted addresses, smart-contract destinations,
+    # known-burn patterns, and unactivated accounts BEFORE we burn fee
+    # limit on a doomed broadcast. Configurable via RISK_BLOCK_LEVEL
+    # (high / medium / none) and RISK_USE_EXTERNAL (TronScan).
+    if RISK_BLOCK_LEVEL != "none":
+        risk_report = assess_risk(req.to_address, external=RISK_USE_EXTERNAL)
+        log.info(
+            "[SEND] Risk | level=%s checks=%s",
+            risk_report.level.value,
+            ",".join(
+                f"{c.name}:{c.status.value}"
+                for c in risk_report.checks
+                if c.status.value != "ok"
+            ) or "all-ok",
+        )
+        if should_block(risk_report.level, RISK_BLOCK_LEVEL):
+            failed = [
+                c.name for c in risk_report.checks if c.status.value == "fail"
+            ]
+            audit.record(
+                "SEND_REJECTED",
+                from_address=tron.address,
+                to_address=req.to_address,
+                amount=str(amount),
+                idempotency_key=req.idempotency_key,
+                client_ip=client_ip,
+                result="risk_too_high",
+                details=(
+                    f"level={risk_report.level.value} "
+                    f"failed={','.join(failed) or 'none'}"
+                ),
+            )
+            metrics.tx_rejected_total.labels(reason="risk_too_high").inc()
+            raise RiskTooHigh(
+                level=risk_report.level.value,
+                report=risk_report.to_dict(),
+            )
 
     # ── Reserve the idempotency slot atomically ──────────────────────────
     # reserve() returns:
@@ -359,6 +406,38 @@ def balance(request: Request, _: str = Depends(verify_api_key)):
         bandwidth_paid_available=res["bandwidth_paid_available"],
         tron_power_staked=res["tron_power"],
     )
+
+
+# --------------------------------------------------------------------------
+# GET /api/v1/risk/{address}  — recipient risk look-up (read-only)
+# --------------------------------------------------------------------------
+
+@router.get("/risk/{address}")
+def risk_endpoint(
+    address: str,
+    request: Request,
+    external: bool = False,
+    _: str = Depends(verify_api_key),
+):
+    """Run all wallet-risk checks against ``address``.
+
+    Read-only: never mutates state, never broadcasts. Same logic the
+    /send preflight uses. ``external=true`` queries the TronScan
+    reputation API (~+300ms); off by default for speed.
+
+    Always returns 200 with a JSON report whose ``level`` field tells
+    you the verdict (``low`` / ``medium`` / ``high`` / ``invalid``).
+    """
+    client_ip = client_address(request)
+    log.info(
+        "[RISK] %s addr=%s external=%s", client_ip, address, external,
+    )
+    report = assess_risk(address, external=external)
+    log.info(
+        "[RISK] result | addr=%s level=%s",
+        address, report.level.value,
+    )
+    return report.to_dict()
 
 
 # --------------------------------------------------------------------------

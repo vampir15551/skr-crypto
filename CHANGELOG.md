@@ -9,8 +9,78 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-04-29
+
+The "don't burn money on doomed broadcasts" release. Adds
+two-tier wallet-risk preflight, a standalone risk endpoint, and
+extends the install wizard with numbered prompts and per-provider
+follow-ups (the latter previously rolled into the [Unreleased]
+section above).
+
 ### Added
-- **Numbered wizard prompts.** `skr-crypto install` (interactive)
+- **Wallet-risk preflight.** New module `skr_crypto.server.risk`
+  runs five local TRON checks against any recipient address:
+  validity, known-burn pattern (TRON null + zero-body fallback),
+  on-chain activation, smart-contract destination detection, and
+  the **Tether USDT contract `isBlackListed`** call. Plus an
+  optional Tier-2 TronScan reputation lookup behind
+  ``--external`` / ``RISK_USE_EXTERNAL=true``.
+- **`GET /api/v1/risk/{address}`** — read-only endpoint that
+  returns a JSON report with the verdict (`low`/`medium`/`high`/
+  `invalid`), per-check breakdown, and a balance/activity summary.
+  Same logic the /send preflight uses.
+- **`POST /api/v1/send` preflight blocking.** Before reserving the
+  idempotency slot, /send now runs the risk assessment and refuses
+  with **HTTP 400 `RISK_TOO_HIGH`** + audit `SEND_REJECTED
+  result=risk_too_high` when the level meets `RISK_BLOCK_LEVEL`.
+  Catches Tether-blacklisted recipients and contract destinations
+  that would silently revert and burn fee_limit on-chain. The full
+  report is attached to the error response so the caller sees
+  exactly which checks fired.
+- **`skr-crypto risk <address>`** CLI command. Calls the endpoint,
+  prints verdict + per-check table, exits 0/10/11/12 by level for
+  shell-pipeline use.
+- **New env vars** in `.env`:
+  - `RISK_BLOCK_LEVEL` — `high` (default) / `medium` / `none`
+  - `RISK_USE_EXTERNAL` — `false` (default) / `true`
+- **Numbered wizard prompts.** `skr-crypto install` interactive
+  mode now uses `ask_choice_numbered` and `ask_yes_no` helpers —
+  every multi-choice prompt shows ``1) … 2) … 3) …`` with the
+  default marked. Operators can type the number, the value name
+  (`env`, `mainnet`), or hit Enter for the default.
+- **Per-provider follow-up prompts** in install. Picking
+  `KEY_PROVIDER=file` immediately asks `PRIVATE_KEY_FILE`;
+  `1password` asks vault/item/field; `keychain` asks
+  service/account.
+- **`--advanced` flag** for `install` exposes prompts for
+  `MIN_TRX_RESERVE`, `MAX_ENERGY_BURN_TRX`, `SHUTDOWN_TIMEOUT`,
+  `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW`. Hidden behind a yes/no
+  toggle in interactive mode so first-time installs stay short.
+- **New install flags** for non-interactive deploys: `--key-file`,
+  `--op-vault`, `--op-item`, `--op-field`, `--keychain-service`,
+  `--keychain-account`, `--advanced`.
+- **`tx_rejected_total{reason="risk_too_high"}`** Prometheus
+  counter — fires every time risk preflight blocks a /send.
+
+### Changed
+- `tests/conftest.py` `mock_tron` fixture now sets risk-clean
+  defaults so existing /send tests don't have to opt out of the
+  new gate. Tests that exercise risk specifically override
+  locally.
+- `output.ask_choice` (free-text constrained prompt) preserved
+  but new prompts should prefer `ask_choice_numbered`.
+
+### Security
+- The `usdt_blacklist` check is the most operationally valuable
+  addition: it catches a real, reproducible class of "broadcast
+  succeeded but on-chain transfer reverted, fee_limit was burned"
+  failures that operators have hit IRL. With
+  `RISK_BLOCK_LEVEL=high` (default), those addresses are now
+  refused before broadcast.
+- Audit + scans refreshed for this release; bandit 0 high (gate
+  level), pip-audit 0 known vulnerabilities.
+
+## [1.1.0] — 2026-04-29
   now uses ``ask_choice_numbered`` and ``ask_yes_no`` helpers — every
   multi-choice prompt shows ``1) … 2) … 3) …`` with the default
   marked. Operators can type the number, the value name (`env`,

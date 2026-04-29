@@ -119,6 +119,19 @@ class APIClient:
         # Balance hits TronGrid through the service — generous timeout.
         return self._get("/api/v1/balance", timeout=30.0)
 
+    def risk(self, address: str, *, external: bool = False) -> dict[str, Any]:
+        """Look up the wallet-risk report for ``address``.
+
+        Tier-1 checks always run (~3-4 RPCs server-side, ~600ms);
+        ``external=True`` adds a TronScan call (~+300ms). Generous
+        timeout because TronGrid latency can spike.
+        """
+        flag = "true" if external else "false"
+        return self._get(
+            f"/api/v1/risk/{address}?external={flag}",
+            timeout=30.0,
+        )
+
     def metrics(self) -> str:
         # /metrics returns Prometheus text, not JSON.
         url = f"{self.base_url}/api/v1/metrics"

@@ -77,3 +77,21 @@ class ConfigError(SkrCryptoError):
     """The service's .env is missing or malformed."""
 
     exit_code = 9
+
+
+# ---------------------------------------------------------------------------
+# Risk-check exit codes — used by `skr-crypto risk`.
+# ---------------------------------------------------------------------------
+# `risk` is informational, not an error per se, but operators want a
+# stable exit-code-per-level so they can chain it in shell scripts:
+#
+#     skr-crypto risk $ADDR && curl ... /api/v1/send ...
+#
+# 0  = LOW (proceed)
+# 10 = MEDIUM (warn — at least one WARN/FAIL fired but nothing high-severity)
+# 11 = HIGH  (refuse — Tether-blacklisted, contract destination, burn pattern)
+# 12 = INVALID (address itself doesn't validate)
+RISK_EXIT_LOW = 0
+RISK_EXIT_MEDIUM = 10
+RISK_EXIT_HIGH = 11
+RISK_EXIT_INVALID = 12

@@ -18,6 +18,7 @@ from skr_crypto.server.exceptions import (
     InsufficientBalance,
     InvalidAddress,
     PayoutError,
+    RiskTooHigh,
     TransactionFailed,
 )
 from skr_crypto.server.idempotency import IdempotencyConflict, UnresolvedIdempotency
@@ -169,6 +170,27 @@ def create_app() -> FastAPI:
     def handle_tx_failed(request: Request, exc: TransactionFailed):
         log.error("[ERROR] %s | %s", exc.code, exc.message)
         return JSONResponse(status_code=500, content={"error": "Transaction failed", "code": exc.code})
+
+    @app.exception_handler(RiskTooHigh)
+    def handle_risk_too_high(request: Request, exc: RiskTooHigh):
+        # Surface the full report so the caller can show the operator
+        # exactly which checks fired without a second round trip to
+        # /api/v1/risk. Status 400 — same class as the other "we
+        # refused before broadcasting" gates (InsufficientBalance,
+        # EnergyTooExpensive).
+        log.warning(
+            "[ERROR] %s | level=%s addr=%s",
+            exc.code, exc.level, exc.report.get("address", "?"),
+        )
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": exc.message,
+                "code": exc.code,
+                "level": exc.level,
+                "report": exc.report,
+            },
+        )
 
     @app.exception_handler(IdempotencyConflict)
     def handle_idempotency_conflict(request: Request, exc: IdempotencyConflict):

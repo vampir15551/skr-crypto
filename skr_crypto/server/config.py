@@ -92,6 +92,23 @@ except InvalidOperation:
     FEE_LIMIT_SAFETY_MULT = Decimal("1.3")
 
 # ---------------------------------------------------------------------------
+# Recipient risk preflight (used by /send and /risk)
+# ---------------------------------------------------------------------------
+# `high`   — block /send only if the address is HIGH risk or INVALID (default)
+# `medium` — also block on MEDIUM (anything that flagged WARN/FAIL)
+# `none`   — never block; risk report is still computed and audited
+RISK_BLOCK_LEVEL: str = os.getenv("RISK_BLOCK_LEVEL", "high").strip().lower()
+
+# Whether the /send preflight (and `skr-crypto risk` without --external)
+# also queries the external reputation source (TronScan). Adds ~1 HTTP
+# call (~200-500ms) per /send. Default off — TronGrid-side checks
+# already catch the dangerous classes (Tether blacklist, smart-contract
+# destination, burn pattern).
+RISK_USE_EXTERNAL: bool = os.getenv(
+    "RISK_USE_EXTERNAL", "false",
+).strip().lower() in ("1", "true", "yes", "on")
+
+# ---------------------------------------------------------------------------
 # Audit
 # ---------------------------------------------------------------------------
 # When set, audit records are also written line-buffered + fsync'd to this
@@ -185,6 +202,11 @@ def validate_config() -> None:
 
     if KEY_PROVIDER == "file" and not PRIVATE_KEY_FILE:
         errors.append("KEY_PROVIDER=file requires PRIVATE_KEY_FILE")
+
+    if RISK_BLOCK_LEVEL not in ("high", "medium", "none"):
+        errors.append(
+            f"RISK_BLOCK_LEVEL must be high/medium/none, got: {RISK_BLOCK_LEVEL}"
+        )
 
     if TRON_NETWORK not in ("mainnet", "shasta", "nile"):
         errors.append(f"TRON_NETWORK must be mainnet/shasta/nile, got: {TRON_NETWORK}")

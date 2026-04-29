@@ -146,6 +146,27 @@ def mock_tron():
         "tron_power": 0,
     })
 
+    # Risk-preflight defaults (added in v1.2). Make every check pass
+    # cleanly so existing /send tests keep working without explicit
+    # setup. Tests that actually exercise risk override these locally.
+    tron.client.get_account = MagicMock(return_value={
+        "create_time": 1700000000_000,
+    })
+    tron.client.get_contract = MagicMock(side_effect=Exception("not a contract"))
+    # `tron._get_usdt_contract()` returns a contract mock whose
+    # `.functions.isBlackListed(addr)` returns False by default.
+    # Wire both the attribute and the method (risk module calls the
+    # method; the existing send tests poke the attribute directly).
+    _usdt_mock = MagicMock()
+    _usdt_mock.functions.isBlackListed = MagicMock(return_value=False)
+    tron._usdt_contract = _usdt_mock
+    tron._get_usdt_contract = MagicMock(return_value=_usdt_mock)
+    tron.get_destination_info = MagicMock(return_value={
+        "exists": True,
+        "trx_balance": Decimal("1"),
+        "usdt_balance": Decimal("100"),
+    })
+
     yield tron
 
     tron.init = original_init
