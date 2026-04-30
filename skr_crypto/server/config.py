@@ -193,8 +193,48 @@ SHUTDOWN_TIMEOUT: int = int(os.getenv("SHUTDOWN_TIMEOUT", "600"))
 # ---------------------------------------------------------------------------
 # Rate limiting
 # ---------------------------------------------------------------------------
+# Legacy sliding-window knobs (1.0–1.5). 1.6.0 introduces a token-bucket
+# limiter; if these are set, they translate to the bucket equivalents
+# below (RATE_LIMIT_IP_CAPACITY, RATE_LIMIT_IP_REFILL_PER_SEC). See ADR 0009.
 RATE_LIMIT_MAX: int = int(os.getenv("RATE_LIMIT_MAX", "30"))
 RATE_LIMIT_WINDOW: int = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+
+# Token-bucket per-IP defaults (1.6.0+). Capacity = max burst; refill
+# per second = sustained ceiling.
+RATE_LIMIT_IP_CAPACITY: int = int(
+    os.getenv("RATE_LIMIT_IP_CAPACITY", str(RATE_LIMIT_MAX))
+)
+try:
+    _ip_refill_default = float(RATE_LIMIT_MAX) / max(1.0, float(RATE_LIMIT_WINDOW))
+except Exception:
+    _ip_refill_default = 0.5
+RATE_LIMIT_IP_REFILL_PER_SEC: float = float(
+    os.getenv("RATE_LIMIT_IP_REFILL_PER_SEC", str(_ip_refill_default))
+)
+
+# Per-token bucket. Higher than the IP bucket because a token represents
+# a single trusted caller; we still cap to bound runaway clients.
+RATE_LIMIT_TOKEN_CAPACITY: int = int(os.getenv("RATE_LIMIT_TOKEN_CAPACITY", "100"))
+RATE_LIMIT_TOKEN_REFILL_PER_SEC: float = float(
+    os.getenv("RATE_LIMIT_TOKEN_REFILL_PER_SEC", "2.0")
+)
+
+# How often the sweeper deletes idle buckets older than ~capacity/refill.
+# Keeps the rate_limit_buckets table O(active recent callers).
+RATE_LIMIT_SWEEP_INTERVAL_SEC: int = int(
+    os.getenv("RATE_LIMIT_SWEEP_INTERVAL_SEC", "300")
+)
+
+# ---------------------------------------------------------------------------
+# Receipt poller (1.6.0+, ADR 0010)
+# ---------------------------------------------------------------------------
+# Postmortem-only — never retries broadcasts. See receipt_poller.py.
+RECEIPT_POLL_INTERVAL_SEC: float = float(os.getenv("RECEIPT_POLL_INTERVAL_SEC", "60"))
+RECEIPT_LOOKBACK_HOURS: float = float(os.getenv("RECEIPT_LOOKBACK_HOURS", "48"))
+RECEIPT_POLL_BATCH: int = int(os.getenv("RECEIPT_POLL_BATCH", "20"))
+RECEIPT_NOT_FOUND_GIVEUP_HOURS: float = float(
+    os.getenv("RECEIPT_NOT_FOUND_GIVEUP_HOURS", "24")
+)
 
 # ---------------------------------------------------------------------------
 # LAN detection

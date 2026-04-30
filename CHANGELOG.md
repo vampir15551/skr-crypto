@@ -9,6 +9,74 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-04-30
+
+The "what actually happened on-chain?" release. Adds a postmortem-only
+receipt poller (so operators see `OUT_OF_ENERGY` / `REVERT` failures
+in near-real-time, not 24 hours later via startup_check) and replaces
+the in-memory sliding-window rate limiter with a persistent
+token-bucket implementation. ADR 0010 + 0009-implementation.
+
+### Added — Receipt poller (ADR 0010)
+
+- **`skr_crypto.server.receipt_poller`** — daemon-thread poller that
+  watches recently-broadcast txids and resolves their on-chain status.
+  **Read-only on the money path** — never retries, never modifies
+  idempotency state, never broadcasts. Tested explicitly in
+  `test_poller_never_calls_send_or_broadcast`.
+- **`tx_status` SQLite table** in the same DB as idempotency. Holds
+  per-txid rows with status, block_number, last_checked, resolved_at.
+  Persists across restarts.
+- **`RECEIPT_RESOLVED` audit event** emitted on every terminal status
+  transition (SUCCESS / OUT_OF_ENERGY / REVERT / GIVEUP / ...).
+- **`GET /api/v1/tx/{txid}/status`** endpoint — synchronous lookup of
+  the on-chain status for a txid. Returns `{known, status,
+  block_number, ...}`. Status `null` while the poller hasn't reached
+  it yet.
+- **Configurable via env**:
+  - `RECEIPT_POLL_INTERVAL_SEC` (default 60)
+  - `RECEIPT_LOOKBACK_HOURS` (default 48)
+  - `RECEIPT_POLL_BATCH` (default 20)
+  - `RECEIPT_NOT_FOUND_GIVEUP_HOURS` (default 24) — after this many
+    hours of NOT_FOUND, the poller flips to terminal `GIVEUP` so the
+    operator gets a clear signal that the tx never landed.
+
+### Added — Persistent token-bucket rate limiter (ADR 0009 implementation)
+
+- **`skr_crypto.server.rate_limit_bucket`** — SQLite-backed token
+  bucket. Two key dimensions: `key_type='ip'` and `key_type='token'`.
+  State persists across restarts; periodic sweeper deletes idle
+  buckets to keep the table bounded.
+- **Replaces the in-memory `_RateLimiter`** in `server.py`. The shim
+  remains for backward compat — `server._limiter.check(ip)` now
+  delegates to the bucket.
+- **Configurable via env**:
+  - `RATE_LIMIT_IP_CAPACITY` (default = `RATE_LIMIT_MAX`)
+  - `RATE_LIMIT_IP_REFILL_PER_SEC` (default derived from
+    `RATE_LIMIT_MAX/RATE_LIMIT_WINDOW`)
+  - `RATE_LIMIT_TOKEN_CAPACITY` / `RATE_LIMIT_TOKEN_REFILL_PER_SEC`
+    (token-keyed gate; not yet wired into middleware as of 1.6.0,
+    primitives ready for future use)
+  - `RATE_LIMIT_SWEEP_INTERVAL_SEC` (default 300)
+
+  Legacy `RATE_LIMIT_MAX`/`RATE_LIMIT_WINDOW` are still honoured
+  and translate automatically to the bucket equivalents.
+
+### Changed
+
+- `lifespan` now starts/stops the receipt poller + the token-bucket
+  limiter alongside the wallet pool + token store.
+- The 1.0-1.5 sliding-window rate-limit semantics are gone. The
+  bucket gives slightly different behaviour (cleaner burst handling;
+  no 30-req-per-window-edge spike). Operators that depended on the
+  exact window-edge behaviour need to know.
+
+### Engineering metrics
+
+- 454 → **482 tests passing** (+28: 14 receipt poller + 12 rate
+  bucket + 2 invariant property tests on the limiter)
+- ruff clean, pip-audit clean, bandit 0 high, mkdocs strict clean
+
 ## [1.5.0] — 2026-04-30
 
 The "safe-update foundation" release. No new wire-format additions

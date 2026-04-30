@@ -234,8 +234,16 @@ def client(mock_tron):
     app = create_app()
     app.router.lifespan_context = test_lifespan
 
-    from skr_crypto.server.server import _limiter
-    _limiter._hits.clear()
+    # Reset the bucket-backed rate limiter for test hermeticity.
+    # 1.6.0+ uses rate_limit_bucket.limiter; the legacy _limiter._hits
+    # dict is unused. We initialise an in-memory bucket here so tests
+    # that go through the middleware can hit it; tests that want a
+    # specific capacity override `rate_limit_bucket.limiter` themselves.
+    from skr_crypto.server import rate_limit_bucket as _rl
+    if _rl.limiter is None:
+        _rl.limiter = _rl.TokenBucketLimiter(db_path=None)
+    else:
+        _rl.limiter._reset_for_tests()
 
     return TestClient(app)
 

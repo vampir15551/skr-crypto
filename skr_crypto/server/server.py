@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -12,7 +11,11 @@ from fastapi.responses import JSONResponse
 
 from skr_crypto.server import metrics
 from skr_crypto.server.audit import AuditWriteError
-from skr_crypto.server.config import RATE_LIMIT_MAX, RATE_LIMIT_WINDOW
+from skr_crypto.server.config import (
+    RATE_LIMIT_IP_CAPACITY,
+    RATE_LIMIT_IP_REFILL_PER_SEC,
+    RATE_LIMIT_SWEEP_INTERVAL_SEC,
+)
 from skr_crypto.server.exceptions import (
     EnergyTooExpensive,
     InsufficientBalance,
@@ -26,6 +29,19 @@ from skr_crypto.server.exceptions import (
 )
 from skr_crypto.server.idempotency import IdempotencyConflict, UnresolvedIdempotency
 from skr_crypto.server.net import client_address
+from skr_crypto.server.rate_limit_bucket import (
+    BucketParams,
+)
+from skr_crypto.server.rate_limit_bucket import (
+    init_limiter as init_rate_limiter,
+)
+from skr_crypto.server.rate_limit_bucket import (
+    shutdown_limiter as shutdown_rate_limiter,
+)
+from skr_crypto.server.receipt_poller import (
+    init_poller,
+    shutdown_poller,
+)
 from skr_crypto.server.routes import router
 from skr_crypto.server.security import load_wallets, lock_key_store
 from skr_crypto.server.shutdown import mark_started, reset_timer
@@ -41,19 +57,35 @@ log = logging.getLogger("payouts")
 # ---------------------------------------------------------------------------
 
 class _RateLimiter:
+    """Compat shim — `_limiter.check(key)` now consults the persistent
+    token-bucket limiter from `rate_limit_bucket.py`. Tests that
+    previously cleared `_limiter._hits` should call
+    `rate_limit_bucket.limiter._reset_for_tests()` instead.
+
+    Two-dimensional check (ip + token) is exercised in middleware;
+    this shim is kept for IP-only legacy paths."""
+
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        # Backward-compat for tests that still reach into _hits.
+        # The new limiter is keyed (key_type, key_value); this dict is
+        # unused in the request path now.
         self._hits: dict[str, list[float]] = defaultdict(list)
 
     def check(self, key: str) -> bool:
-        now = time.time()
-        with self._lock:
-            window = self._hits[key]
-            self._hits[key] = [t for t in window if now - t < RATE_LIMIT_WINDOW]
-            if len(self._hits[key]) >= RATE_LIMIT_MAX:
-                return False
-            self._hits[key].append(now)
+        from skr_crypto.server.rate_limit_bucket import limiter as bucket
+        if bucket is None:
+            # Lifespan hasn't run yet (e.g. some tests). Fail-open —
+            # the legacy in-memory check is gone; this only fires
+            # before the limiter is initialised.
             return True
+        return bucket.check(
+            "ip", key,
+            BucketParams(
+                capacity=RATE_LIMIT_IP_CAPACITY,
+                refill_per_sec=RATE_LIMIT_IP_REFILL_PER_SEC,
+            ),
+        )
 
 
 _limiter = _RateLimiter()
@@ -67,15 +99,22 @@ _limiter = _RateLimiter()
 async def lifespan(_app: FastAPI):
     # All sync calls — no await
     tron.init()
-    # Initialise the per-caller token store. Shares the idempotency DB
-    # path when configured; in-memory otherwise (dev / tests).
     from skr_crypto.server.config import IDEMPOTENCY_DB_PATH
+    # Persistent stores share the idempotency DB path. In-memory
+    # fallback when unset (dev / tests).
     init_token_store(IDEMPOTENCY_DB_PATH or None)
+    init_rate_limiter(
+        IDEMPOTENCY_DB_PATH or None,
+        sweep_interval_sec=RATE_LIMIT_SWEEP_INTERVAL_SEC,
+    )
     # Load every configured wallet through the active KeyProvider and
     # populate the pool BEFORE we start serving traffic. The
     # log line in WalletPool.init() prints the names so the operator
     # can confirm "yes, these are the wallets I expected."
     wallets.init(load_wallets())
+    # Receipt poller (postmortem only — never retries broadcasts).
+    # See ADR 0010.
+    init_poller(IDEMPOTENCY_DB_PATH or None, tron)
     mark_started()
     reset_timer()
     # Refresh the OFAC SDN sanctions list (best-effort). The list is
@@ -100,6 +139,8 @@ async def lifespan(_app: FastAPI):
     log.info("Payout service ready")
     yield
     log.info("Payout service stopping")
+    shutdown_poller()
+    shutdown_rate_limiter()
     wallets.destroy()
     tron.destroy()
     # Close the SQLite idempotency store (if that's the backend) so any

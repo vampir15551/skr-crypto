@@ -515,6 +515,53 @@ def wallets_endpoint(
 
 
 # --------------------------------------------------------------------------
+# GET /api/v1/tx/{txid}/status — postmortem on-chain status (1.6.0+)
+# --------------------------------------------------------------------------
+
+@router.get("/tx/{txid}/status")
+def tx_status_endpoint(
+    txid: str,
+    request: Request,
+    token_id: str = Depends(require_scope("read")),
+):
+    """Look up the on-chain status of a previously broadcast txid.
+
+    This is the postmortem-poller's read API — see ADR 0010. Status
+    becomes terminal asynchronously (typically within ~60s of the
+    block landing). Until the poller resolves it, ``status`` is
+    ``null`` and the caller should poll back later.
+
+    Always returns 200 (even for unknown txids — they map to
+    ``status: null, known: false``)."""
+    from skr_crypto.server.receipt_poller import poller
+    if poller is None:
+        return {
+            "txid": txid,
+            "known": False,
+            "status": None,
+            "message": "receipt poller not running",
+        }
+    rec = poller.get_status(txid)
+    if rec is None:
+        return {
+            "txid": txid,
+            "known": False,
+            "status": None,
+        }
+    return {
+        "txid": rec.txid,
+        "known": True,
+        "status": rec.status,           # None until terminal
+        "block_number": rec.block_number,
+        "idempotency_key": rec.idempotency_key,
+        "first_seen": rec.first_seen,
+        "last_checked": rec.last_checked,
+        "resolved_at": rec.resolved_at,
+        "last_error": rec.last_error,
+    }
+
+
+# --------------------------------------------------------------------------
 # GET /api/v1/risk/{address}  — recipient risk look-up (read-only)
 # --------------------------------------------------------------------------
 
