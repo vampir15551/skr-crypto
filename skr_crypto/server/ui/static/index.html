@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SKR Crypto — Operator UI</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="alpine.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body x-data="app()" x-init="init()">
+
+<header>
+  <div class="brand">
+    <strong>SKR Crypto</strong>
+    <span class="muted">Operator UI</span>
+  </div>
+  <nav x-show="authed">
+    <a :class="{active: tab==='dashboard'}" @click.prevent="go('dashboard')" href="#/dashboard">Dashboard</a>
+    <a :class="{active: tab==='wallets'}" @click.prevent="go('wallets')" href="#/wallets">Wallets</a>
+    <a :class="{active: tab==='audit'}" @click.prevent="go('audit')" href="#/audit">Audit</a>
+    <a :class="{active: tab==='risk'}" @click.prevent="go('risk')" href="#/risk">Risk</a>
+    <a :class="{active: tab==='tokens'}" @click.prevent="go('tokens')" href="#/tokens" x-show="hasAdmin">Tokens</a>
+    <a :class="{active: tab==='webhooks'}" @click.prevent="go('webhooks')" href="#/webhooks" x-show="hasAdmin">Webhooks</a>
+    <a class="logout" @click.prevent="logout()" href="#">Logout</a>
+  </nav>
+</header>
+
+<main>
+  <!-- ========== LOGIN ========== -->
+  <section x-show="!authed" class="login">
+    <h2>Sign in</h2>
+    <p class="muted">Paste your <code>X-API-Key</code> token. <strong>Never echoed</strong>; never written to disk; cleared on tab close.</p>
+    <form @submit.prevent="login()">
+      <input type="password" placeholder="skr_..." x-model="tokenInput" autocomplete="off" autofocus>
+      <button type="submit">Sign in</button>
+    </form>
+    <p x-show="loginError" class="error" x-text="loginError"></p>
+    <p class="muted small">
+      No money-moving operations are exposed in this UI. To send USDT, use the
+      authenticated <code>POST /api/v1/send</code> endpoint directly.
+    </p>
+  </section>
+
+  <!-- ========== DASHBOARD ========== -->
+  <section x-show="authed && tab==='dashboard'" x-cloak>
+    <h2>Dashboard</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="muted">Service</div>
+        <div class="value" x-text="health.status || '—'"></div>
+        <div class="muted small">Network: <span x-text="health.network || '—'"></span></div>
+      </div>
+      <div class="card">
+        <div class="muted">Node</div>
+        <div class="value" x-text="health.node_connected ? 'CONNECTED' : 'down'"></div>
+      </div>
+      <div class="card">
+        <div class="muted">Wallets</div>
+        <div class="value" x-text="health.wallet_count || '0'"></div>
+        <div class="muted small" x-text="(health.wallet_names || []).join(', ')"></div>
+      </div>
+      <div class="card">
+        <div class="muted">Uptime</div>
+        <div class="value" x-text="formatDuration(health.uptime_seconds || 0)"></div>
+      </div>
+    </div>
+    <p class="muted">Token: <code x-text="tokenIdLabel || '—'"></code></p>
+  </section>
+
+  <!-- ========== WALLETS ========== -->
+  <section x-show="authed && tab==='wallets'" x-cloak>
+    <h2>Wallets</h2>
+    <p class="muted">Auto-pick winner: <code x-text="walletsData.auto_pick || '—'"></code></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Wallet</th><th>Address</th><th>USDT</th><th>TRX</th><th>Energy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="w in walletsData.wallets" :key="w.wallet">
+          <tr>
+            <td><strong x-text="w.wallet"></strong></td>
+            <td><code x-text="w.address"></code></td>
+            <td x-text="w.usdt"></td>
+            <td x-text="w.trx"></td>
+            <td x-text="w.energy_available || 0"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <button @click="refreshWallets()">Refresh</button>
+  </section>
+
+  <!-- ========== AUDIT ========== -->
+  <section x-show="authed && tab==='audit'" x-cloak>
+    <h2>Audit log</h2>
+    <div class="filters">
+      <label>Event:
+        <select x-model="auditFilter" @change="refreshAudit()">
+          <option value="">all</option>
+          <option>SEND_SUCCESS</option>
+          <option>SEND_FAILED</option>
+          <option>SEND_REJECTED</option>
+          <option>SEND_DUPLICATE</option>
+          <option>RECEIPT_RESOLVED</option>
+          <option>WEBHOOK_GIVEUP</option>
+          <option>STARTUP_CHECK</option>
+        </select>
+      </label>
+      <button @click="refreshAudit()">Refresh</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th><th>Event</th><th>Wallet</th><th>To</th><th>Amount</th>
+          <th>Result</th><th>Token</th><th>Txid</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in auditRecords" :key="r.id">
+          <tr :class="auditRowClass(r)">
+            <td x-text="formatTime(r.timestamp)"></td>
+            <td><strong x-text="r.event"></strong></td>
+            <td x-text="r.wallet || '—'"></td>
+            <td><code x-text="(r.to_address || '').slice(0, 10) + (r.to_address ? '…' : '')" :title="r.to_address"></code></td>
+            <td x-text="r.amount || ''"></td>
+            <td x-text="r.result || ''"></td>
+            <td x-text="r.token_id || ''"></td>
+            <td><code x-text="(r.txid || '').slice(0, 10) + (r.txid ? '…' : '')" :title="r.txid"></code></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <p class="muted small" x-text="auditRecords.length + ' records'"></p>
+  </section>
+
+  <!-- ========== RISK ========== -->
+  <section x-show="authed && tab==='risk'" x-cloak>
+    <h2>Risk lookup</h2>
+    <form @submit.prevent="lookupRisk()">
+      <input type="text" placeholder="TRX address (T...)" x-model="riskAddr">
+      <label class="inline"><input type="checkbox" x-model="riskExternal"> external (TronScan + MistTrack)</label>
+      <button type="submit">Check</button>
+    </form>
+    <div x-show="riskReport" class="risk-report">
+      <h3 :class="'level-' + (riskReport && riskReport.level)">
+        Level: <span x-text="(riskReport && riskReport.level) || '—'"></span>
+      </h3>
+      <table>
+        <thead><tr><th>Check</th><th>Status</th><th>Severity</th><th>Message</th></tr></thead>
+        <tbody>
+          <template x-for="c in (riskReport && riskReport.checks) || []">
+            <tr :class="'risk-' + c.status">
+              <td x-text="c.name"></td>
+              <td x-text="c.status"></td>
+              <td x-text="c.severity"></td>
+              <td x-text="c.message"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== TOKENS (admin) ========== -->
+  <section x-show="authed && tab==='tokens' && hasAdmin" x-cloak>
+    <h2>API tokens</h2>
+    <p class="muted">Read-only here. Use <code>skr-crypto token</code> CLI to create / revoke.</p>
+    <p class="error">Note: this UI does not list tokens by hash; it shows recent token IDs from audit. Use the CLI for the full table.</p>
+  </section>
+
+  <!-- ========== WEBHOOKS (admin) ========== -->
+  <section x-show="authed && tab==='webhooks' && hasAdmin" x-cloak>
+    <h2>Webhook deliveries</h2>
+    <p class="muted">Read-only here. Use <code>skr-crypto webhook</code> CLI to retry / configure.</p>
+  </section>
+</main>
+
+<footer>
+  <span class="muted small">
+    Read-only operator UI. Money paths are not exposed here — use <code>POST /api/v1/send</code> with an authorized caller.
+  </span>
+</footer>
+</body>
+</html>

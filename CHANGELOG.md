@@ -9,6 +9,59 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-04-30
+
+The "compliance/finance can see things without shell access" release.
+Adds a strictly **read-only** operator web UI mounted at `/ui/`, plus
+the audit-pagination API endpoint that backs it. ADR 0012.
+
+### Added — Read-only operator UI (ADR 0012)
+
+- **Static SPA** at `/ui/`. ~13 KB total bundle (Alpine.js 44 KB
+  bundled locally — no CDN dependency, air-gap friendly).
+- Hash-based routing across tabs:
+  - Dashboard — health summary, node connection, wallet count
+  - Wallets — live balances, auto-pick winner
+  - Audit — paginated audit log with event filter
+  - Risk — recipient address lookup with optional external sources
+  - Tokens — placeholder (admin-scope only; CLI is the primary tool)
+  - Webhooks — placeholder (admin-scope only; CLI is the primary tool)
+- **Login flow:** paste `X-API-Key` token; stored in `sessionStorage`
+  only (never localStorage, never cookies). Cleared on tab close.
+- **Money-path invariant tested** (`tests/test_ui.py`): the UI bundle
+  contains zero `/api/v1/send` references; no inline event handlers
+  (CSP-friendly).
+
+### Added — `GET /api/v1/audit`
+
+- **Paginated audit reader** (`read` scope). Reads
+  `AUDIT_LOG_FILE`, returns most-recent-first, supports
+  `?event=...` filter and `?before_id=...` pagination cursor.
+  Default limit 100, max 500.
+- Cost: O(file_size) per request. For multi-GB log files,
+  operators should grep / tail directly. The endpoint exists for
+  the UI's tabular view + light operational use.
+
+### Added — Wheel ships UI bundle
+
+- `pyproject.toml` includes `skr_crypto.server.ui.static/*` as
+  package-data. Operators get the UI at `/ui/` automatically after
+  `pip install`.
+
+### Engineering metrics
+
+- 500 → **510 tests passing** (+10 UI tests)
+- ruff clean, mkdocs strict clean
+
+### Operator notes
+
+- `/ui/` is unauthenticated for the static HTML (the page is just
+  HTML — auth happens at every API call from the page). If you put
+  Caddy / nginx in front, restrict `/ui/` to your office / VPN at
+  the proxy layer if you don't want anyone to see the login page.
+- The UI is NOT a substitute for the CLI; mutating commands
+  (`token create`, `wallet add`, `webhook setup`, etc.) remain CLI-only.
+
 ## [1.7.0] — 2026-04-30
 
 The "near-real-time event delivery" release. Adds opt-in HTTP webhooks

@@ -98,6 +98,11 @@ Changelog = "https://github.com/vampir15551/skr-crypto/blob/main/CHANGELOG.md"
 [tool.setuptools.packages.find]
 include = ["skr_crypto*"]
 
+[tool.setuptools.package-data]
+# Ship the read-only operator UI's static assets inside the wheel so a
+# pip-installed deploy serves them at /ui/ without an extra step.
+"skr_crypto.server.ui" = ["static/*"]
+
 [tool.setuptools.dynamic]
 version = { attr = "skr_crypto.version.__version__" }
 

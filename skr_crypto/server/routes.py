@@ -515,6 +515,64 @@ def wallets_endpoint(
 
 
 # --------------------------------------------------------------------------
+# GET /api/v1/audit — paginated audit reader (1.8.0+, used by the web UI)
+# --------------------------------------------------------------------------
+
+@router.get("/audit")
+def audit_endpoint(
+    request: Request,
+    limit: int = Query(default=100, ge=1, le=500),
+    before_id: str | None = Query(default=None, max_length=40),
+    event: str | None = Query(default=None, max_length=64),
+    token_id: str = Depends(require_scope("read")),
+):
+    """Paginated audit-log reader. Returns the most recent records first.
+
+    Reads ``AUDIT_LOG_FILE`` (the durable JSON-line log). Empty when
+    the file isn't configured. ``before_id`` lets the UI page through
+    older records; ``event`` filters by event name.
+
+    Cost: O(file_size) per request — the audit file is rewound + scanned
+    each time. For multi-GB log files this is slow. Operators that need
+    high-throughput reads should grep / tail the file directly. The
+    endpoint exists for the UI's tabular view + light operational use.
+    """
+    from skr_crypto.server.config import AUDIT_LOG_FILE
+    request.state.token_id = token_id
+    if not AUDIT_LOG_FILE:
+        return {"records": [], "warning": "AUDIT_LOG_FILE not configured"}
+    import json as _json
+    import os as _os
+    if not _os.path.exists(AUDIT_LOG_FILE):
+        return {"records": []}
+    out: list[dict] = []
+    try:
+        with open(AUDIT_LOG_FILE, encoding="utf-8") as fp:
+            # Cheap approach for v1: read everything, slice. Files
+            # past ~50MB will need a more efficient scan; that's a
+            # future enhancement.
+            for line in fp:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = _json.loads(line)
+                except _json.JSONDecodeError:
+                    continue
+                if event and rec.get("event") != event:
+                    continue
+                out.append(rec)
+    except OSError as exc:
+        log.warning("[AUDIT] read failed: %s", exc)
+        return {"records": [], "error": str(exc)}
+    # Sort by id descending (most recent first)
+    out.sort(key=lambda r: r.get("id", ""), reverse=True)
+    if before_id:
+        out = [r for r in out if r.get("id", "") < before_id]
+    return {"records": out[:limit], "total_seen": len(out)}
+
+
+# --------------------------------------------------------------------------
 # GET /api/v1/tx/{txid}/status — postmortem on-chain status (1.6.0+)
 # --------------------------------------------------------------------------
 

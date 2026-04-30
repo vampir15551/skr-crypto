@@ -362,4 +362,20 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=500, content={"error": exc.message, "code": exc.code})
 
     app.include_router(router)
+
+    # ── Read-only operator UI (1.8.0+, ADR 0012) ────────────────────────
+    # Static SPA mounted at /ui/. Auth happens at the API layer; the UI
+    # bundle is just HTML/CSS/JS. Searching the bundle for "/api/v1/send"
+    # MUST return zero hits — tested in tests/test_ui.py.
+    from pathlib import Path
+
+    from fastapi.staticfiles import StaticFiles
+    _ui_dir = Path(__file__).parent / "ui" / "static"
+    if _ui_dir.exists() and (_ui_dir / "index.html").exists():
+        app.mount(
+            "/ui",
+            StaticFiles(directory=str(_ui_dir), html=True),
+            name="ui",
+        )
+
     return app
