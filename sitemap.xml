@@ -93,6 +93,18 @@
          <lastmod>2026-04-30</lastmod>
     </url>
     <url>
+         <loc>https://vampir15551.github.io/skr-crypto/adr/0007-engineering-safety-practices/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://vampir15551.github.io/skr-crypto/adr/0008-per-caller-api-tokens/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://vampir15551.github.io/skr-crypto/adr/0009-token-bucket-rate-limit/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/</loc>
          <lastmod>2026-04-30</lastmod>
     </url>
