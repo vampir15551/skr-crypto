@@ -854,6 +854,8 @@
       
         
       
+        
+      
     
     
     
@@ -920,6 +922,34 @@
     
   
     wallet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/token/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    token
   
 
     
@@ -1322,6 +1352,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1544,6 +1580,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="0007-engineering-safety-practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 — Engineering safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="0008-per-caller-api-tokens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0008 — Per-caller API tokens
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="0009-token-bucket-rate-limit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0009 — Token-bucket rate limiter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1719,6 +1839,21 @@ warrant one.</p>
 <td><a href="0006-encrypted-keystore/">0006</a></td>
 <td>Encrypted-file keystore: AES-256-GCM + scrypt + per-entry IV with name-bound AAD</td>
 <td>Single chmod-600 JSON file holds N wallets behind one passphrase; replaces 1Password as the recommended container-friendly backend.</td>
+</tr>
+<tr>
+<td><a href="0007-engineering-safety-practices/">0007</a></td>
+<td>Engineering safety practices for the money path</td>
+<td>Invariant tests, threat-model tests, wire-format goldens, property-based fuzz, CHANGELOG/invariant CI gates, CODEOWNERS protection, canary deploy.</td>
+</tr>
+<tr>
+<td><a href="0008-per-caller-api-tokens/">0008</a></td>
+<td>Per-caller API tokens with scopes</td>
+<td>Token store with scrypt-hashed entries; scopes admin/send/read/metrics; <code>AUTH_TOKEN</code> kept as legacy compat shim for 1.x.</td>
+</tr>
+<tr>
+<td><a href="0009-token-bucket-rate-limit/">0009</a></td>
+<td>Persisted token-bucket rate limiter</td>
+<td>Replaces in-memory sliding window with SQLite-backed token bucket keyed by both IP and token ID. (Implementation deferred to 1.6.0; ADR ships in 1.5.0.)</td>
 </tr>
 </tbody>
 </table>

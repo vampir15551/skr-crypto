@@ -13,6 +13,10 @@
         <link rel="canonical" href="https://vampir15551.github.io/skr-crypto/adr/0007-engineering-safety-practices/">
       
       
+        <link rel="prev" href="../0006-encrypted-keystore/">
+      
+      
+        <link rel="next" href="../0008-per-caller-api-tokens/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>0007 — Engineering safety practices for the money path - SKR Crypto</title>
+        <title>0007 — Engineering safety - SKR Crypto</title>
       
     
     
@@ -110,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              0007 — Engineering safety practices for the money path
+              0007 — Engineering safety
             
           </span>
         </div>
@@ -850,6 +854,8 @@
       
         
       
+        
+      
     
     
     
@@ -916,6 +922,34 @@
     
   
     wallet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/token/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    token
   
 
     
@@ -1295,6 +1329,8 @@
       
   
   
+    
+  
   
   
     
@@ -1316,6 +1352,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1325,11 +1367,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -1357,7 +1399,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1525,6 +1567,330 @@
     
   
     0006 — Encrypted keystore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 — Engineering safety
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 — Engineering safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-invariant-tests-are-explicit-marked-and-gated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Invariant tests are explicit, marked, and gated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-adversary-tests-cover-every-threat-in-securitymd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Adversary tests cover every threat in SECURITY.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-wire-format-golden-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Wire-format golden compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-property-based-tests-on-critical-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Property-based tests on critical paths
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-mutation-testing-on-a-monthly-cadence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Mutation testing on a monthly cadence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-changelog-entry-is-mandatory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. CHANGELOG entry is mandatory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-codeowners-protect-the-money-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. CODEOWNERS protect the money path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-signed-commits-and-signed-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Signed commits and signed tags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-canary-deploy-after-each-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Canary deploy after each release
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-dependency-lockdown-reproducible-builds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Dependency lockdown + reproducible builds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-pr-checklist-contributingmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. PR checklist (CONTRIBUTING.md)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternatives-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternatives considered
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0008-per-caller-api-tokens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0008 — Per-caller API tokens
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0009-token-bucket-rate-limit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0009 — Token-bucket rate limiter
   
 
     

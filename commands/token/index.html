@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://vampir15551.github.io/skr-crypto/commands/backups/">
+        <link rel="canonical" href="https://vampir15551.github.io/skr-crypto/commands/token/">
       
       
-        <link rel="prev" href="../configuration/">
+        <link rel="prev" href="../wallet/">
       
       
-        <link rel="next" href="../diagnostics/">
+        <link rel="next" href="../lifecycle/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Backups - SKR Crypto</title>
+        <title>token - SKR Crypto</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#backup-restore" class="md-skip">
+        <a href="#skr-crypto-token" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Backups
+              token
             
           </span>
         </div>
@@ -943,10 +943,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../token/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    token
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -962,6 +989,164 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scopes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scopes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-show-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token show ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-create" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token create
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-revoke-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token revoke ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-rotate-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token rotate ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended workflow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommended workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#first-time-setup-replacing-legacy-auth_token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        First-time setup (replacing legacy AUTH_TOKEN)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#suspected-leak" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Suspected leak
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-attribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit attribution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1055,37 +1240,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Backups
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../backups/" class="md-nav__link">
         
   
   
@@ -1101,48 +1259,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#backup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        backup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#restore" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        restore
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1796,10 +1912,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#backup" class="md-nav__link">
+  <a href="#scopes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        backup
+        Scopes
       
     </span>
   </a>
@@ -1807,10 +1923,126 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#restore" class="md-nav__link">
+  <a href="#token-list" class="md-nav__link">
     <span class="md-ellipsis">
       
-        restore
+        token list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-show-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token show ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-create" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token create
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-revoke-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token revoke ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-rotate-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        token rotate ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended workflow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommended workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#first-time-setup-replacing-legacy-auth_token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        First-time setup (replacing legacy AUTH_TOKEN)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#suspected-leak" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Suspected leak
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-attribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit attribution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
       
     </span>
   </a>
@@ -1834,7 +2066,7 @@
 
 
   
-    <a href="https://github.com/vampir15551/skr-crypto/edit/main/docs/commands/backups.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/vampir15551/skr-crypto/edit/main/docs/commands/token.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1842,58 +2074,271 @@
   
 
 
-<h1 id="backup-restore">Backup / restore<a class="headerlink" href="#backup-restore" title="Permanent link">#</a></h1>
-<p>The service keeps state on disk: <code>data/audit.log</code> (durable JSON-line
-audit) and <code>data/idempotency.db</code> (SQLite WAL store). These commands
-snapshot and restore that directory.</p>
-<h2 id="backup"><code>backup</code><a class="headerlink" href="#backup" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>skr-crypto<span class="w"> </span>backup<span class="w"> </span><span class="o">[</span>--out<span class="w"> </span>PATH<span class="o">]</span><span class="w"> </span><span class="o">[</span>--keep<span class="w"> </span>N<span class="o">]</span>
+<h1 id="skr-crypto-token"><code>skr-crypto token</code><a class="headerlink" href="#skr-crypto-token" title="Permanent link">#</a></h1>
+<p>Manage per-caller API tokens. Added in 1.5.0 — see <a href="../../adr/0008-per-caller-api-tokens/">ADR 0008</a> for the design rationale.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>skr-crypto token
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── list [--include-revoked] [--json]
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── show ID [--json]
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── create --name N --scope S[,S...]
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── revoke ID [--yes]
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>└── rotate ID [--yes]
 </span></code></pre></div>
-<p>Creates <code>&lt;install&gt;/backups/data-YYYYMMDD-HHMMSS.tar.gz</code>. Safe to run
-while the service is up:</p>
-<ul>
-<li>Audit log is append + fsync per record, so the archive is internally
-  consistent.</li>
-<li>SQLite is in WAL mode, so the read in tar doesn't block writers.</li>
-<li>WAL/SHM files are excluded — they're transient and reopening the
-  <code>.db</code> rebuilds them.</li>
-</ul>
+<p>Tokens live in the same SQLite DB as the idempotency store
+(<code>IDEMPOTENCY_DB_PATH</code>). The CLI talks to that DB directly — no
+running service required for <code>list</code>/<code>revoke</code>/<code>rotate</code>. Service picks
+up new tokens on next restart (or, for <code>revoke</code>, on the next
+authenticated request — revocation is checked at verification time).</p>
+<hr />
+<h2 id="scopes">Scopes<a class="headerlink" href="#scopes" title="Permanent link">#</a></h2>
+<p>Four well-known values:</p>
 <table>
 <thead>
 <tr>
-<th>Option</th>
-<th>Default</th>
-<th>Description</th>
+<th>Scope</th>
+<th>Endpoints</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>--out PATH</code></td>
-<td><code>&lt;install&gt;/backups</code></td>
-<td>Where to write the archive</td>
+<td><code>admin</code></td>
+<td>every endpoint, including future write-ops</td>
 </tr>
 <tr>
-<td><code>--keep N</code></td>
-<td><code>14</code></td>
-<td>Retain at most N most-recent backups</td>
+<td><code>send</code></td>
+<td><code>POST /send</code> + everything <code>read</code> covers</td>
+</tr>
+<tr>
+<td><code>read</code></td>
+<td><code>GET /balance</code>, <code>/wallets</code>, <code>/risk</code>, <code>/health</code></td>
+</tr>
+<tr>
+<td><code>metrics</code></td>
+<td><code>GET /metrics</code> only</td>
 </tr>
 </tbody>
 </table>
-<h2 id="restore"><code>restore</code><a class="headerlink" href="#restore" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>skr-crypto<span class="w"> </span>restore<span class="w"> </span>&lt;archive&gt;<span class="w"> </span><span class="o">[</span>-y<span class="o">]</span>
+<p>Implication graph:</p>
+<ul>
+<li><code>admin</code> ⊇ <code>send</code> ⊇ <code>read</code></li>
+<li><code>admin</code> ⊇ <code>metrics</code></li>
+<li><code>read</code> and <code>metrics</code> are <strong>siblings</strong> (a metrics scraper shouldn't see balances).</li>
+</ul>
+<p>Pick the narrowest scope that satisfies your caller's needs:</p>
+<table>
+<thead>
+<tr>
+<th>Caller</th>
+<th>Scopes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Production back-office that initiates payouts</td>
+<td><code>send,read</code></td>
+</tr>
+<tr>
+<td>Internal dashboard that polls balances + risk</td>
+<td><code>read</code></td>
+</tr>
+<tr>
+<td>Prometheus scraper</td>
+<td><code>metrics</code></td>
+</tr>
+<tr>
+<td>You, the operator</td>
+<td><code>admin</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="token-list"><code>token list</code><a class="headerlink" href="#token-list" title="Permanent link">#</a></h2>
+<p>Default lists every active (non-revoked) token. <code>--include-revoked</code>
+adds the historical entries.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$<span class="w"> </span>skr-crypto<span class="w"> </span>token<span class="w"> </span>list
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>┏━━━━━━━━━━━━<span class="w"> </span>API<span class="w"> </span>tokens<span class="w"> </span>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>┃<span class="w"> </span>ID<span class="w">         </span>Name<span class="w">              </span>Scopes<span class="w">      </span>Created<span class="w">            </span>Last<span class="w"> </span>used<span class="w">     </span>Status<span class="w"> </span>┃
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│<span class="w"> </span>8d7e6b...<span class="w">  </span>backoffice-prod<span class="w">   </span>send,read<span class="w">   </span><span class="m">2026</span>-04-30T13:00<span class="w">   </span><span class="m">2026</span>-04-30T15:21<span class="w">  </span>active<span class="w"> </span>│
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│<span class="w"> </span>4f3a1c...<span class="w">  </span>metrics-prom<span class="w">      </span>metrics<span class="w">     </span><span class="m">2026</span>-04-30T13:01<span class="w">   </span><span class="m">2026</span>-04-30T15:30<span class="w">  </span>active<span class="w"> </span>│
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│<span class="w"> </span>a2b9d4...<span class="w">  </span>dashboard-internal<span class="w"> </span><span class="nb">read</span><span class="w">       </span><span class="m">2026</span>-04-30T13:05<span class="w">   </span><span class="m">2026</span>-04-30T14:42<span class="w">  </span>active<span class="w"> </span>│
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>└────────────────────────────────────────────────────────────────────────────────┘
 </span></code></pre></div>
-<p>Restores <code>data/</code> from a <code>.tar.gz</code> produced by <code>backup</code>. The current
-<code>data/</code> is moved aside to <code>data.pre-restore-&lt;ts&gt;/</code> first — a botched
-restore is recoverable.</p>
-<p>Path traversal is rejected (an archive that tries to extract outside
-the install dir fails loudly). The service should be stopped first;
-the command warns but doesn't enforce, since some failure modes are
-diagnosable only with the service down.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># After a bad upgrade</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>skr-crypto<span class="w"> </span>stop
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>skr-crypto<span class="w"> </span>restore<span class="w"> </span>backups/data-20260427-120000.tar.gz<span class="w"> </span>--yes
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>skr-crypto<span class="w"> </span>start
+<p><code>--json</code> for scripts:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>$<span class="w"> </span>skr-crypto<span class="w"> </span>token<span class="w"> </span>list<span class="w"> </span>--json
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="o">[</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="o">{</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="s2">&quot;id&quot;</span>:<span class="w"> </span><span class="s2">&quot;8d7e6b...&quot;</span>,
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="s2">&quot;name&quot;</span>:<span class="w"> </span><span class="s2">&quot;backoffice-prod&quot;</span>,
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="s2">&quot;scopes&quot;</span>:<span class="w"> </span><span class="o">[</span><span class="s2">&quot;read&quot;</span>,<span class="w"> </span><span class="s2">&quot;send&quot;</span><span class="o">]</span>,
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="s2">&quot;created_at&quot;</span>:<span class="w"> </span><span class="s2">&quot;2026-04-30T13:00:00+00:00&quot;</span>,
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="s2">&quot;last_used_at&quot;</span>:<span class="w"> </span><span class="s2">&quot;2026-04-30T15:21:33+00:00&quot;</span>,
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="s2">&quot;revoked_at&quot;</span>:<span class="w"> </span>null,
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="s2">&quot;created_by&quot;</span>:<span class="w"> </span><span class="s2">&quot;operator&quot;</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="o">}</span>,
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span>...
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="o">]</span>
 </span></code></pre></div>
+<hr />
+<h2 id="token-show-id"><code>token show ID</code><a class="headerlink" href="#token-show-id" title="Permanent link">#</a></h2>
+<p>Single-token view with all metadata. Plaintext is <strong>never</strong> shown
+(it was returned only at <code>create</code> time).</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$<span class="w"> </span>skr-crypto<span class="w"> </span>token<span class="w"> </span>show<span class="w"> </span>8d7e6b
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>┏━━━━━━━━━━━━━<span class="w"> </span>Token<span class="w"> </span>8d7e6b<span class="w"> </span>━━━━━━━━━━━━━━━┓
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>┃<span class="w"> </span>Field<span class="w">          </span>Value<span class="w">                     </span>┃
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│<span class="w"> </span>id<span class="w">             </span>8d7e6b...<span class="w">                 </span>│
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│<span class="w"> </span>name<span class="w">           </span>backoffice-prod<span class="w">           </span>│
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>│<span class="w"> </span>scopes<span class="w">         </span>read,send<span class="w">                 </span>│
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>│<span class="w"> </span>created_at<span class="w">     </span><span class="m">2026</span>-04-30T13:00:00+00:00<span class="w"> </span>│
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>│<span class="w"> </span>last_used_at<span class="w">   </span><span class="m">2026</span>-04-30T15:21:33+00:00<span class="w"> </span>│
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>│<span class="w"> </span>revoked_at<span class="w">     </span>None<span class="w">                      </span>│
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>│<span class="w"> </span>created_by<span class="w">     </span>operator<span class="w">                  </span>│
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>└──────────────────────────────────────────┘
+</span></code></pre></div>
+<hr />
+<h2 id="token-create"><code>token create</code><a class="headerlink" href="#token-create" title="Permanent link">#</a></h2>
+<p>Mints a new token. The plaintext value is shown <strong>once</strong> and cannot be
+recovered — copy it the moment you see it.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$<span class="w"> </span>skr-crypto<span class="w"> </span>token<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>backoffice-prod<span class="w"> </span>--scope<span class="w"> </span>send,read
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>✓<span class="w"> </span>Created<span class="w"> </span>token<span class="w"> </span><span class="nv">id</span><span class="o">=</span>8d7e6b1234ab<span class="w"> </span><span class="nv">name</span><span class="o">=</span><span class="s1">&#39;backoffice-prod&#39;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ℹ<span class="w"> </span>Scopes:<span class="w"> </span>read,send
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>⚠<span class="w"> </span>The<span class="w"> </span>token<span class="w"> </span>is<span class="w"> </span>shown<span class="w"> </span>ONCE<span class="w"> </span>—<span class="w"> </span>copy<span class="w"> </span>it<span class="w"> </span>now.
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>skr_F-z9T3qG4yPm8aEW1Lc2hKrXuJsvYnoMt6BjbN0iVCa
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>ℹ<span class="w"> </span>Restart<span class="w"> </span>the<span class="w"> </span>service<span class="w"> </span>to<span class="w"> </span>load<span class="w"> </span>the<span class="w"> </span>token.<span class="w"> </span>Use<span class="w"> </span>it<span class="w"> </span>via<span class="w"> </span>X-API-Key:<span class="w"> </span>&lt;token&gt;<span class="w"> </span>header.
+</span></code></pre></div>
+<p>The token immediately becomes valid in the persistent store. The
+service caches active tokens in memory after boot, but verification
+is per-request — a new token is picked up on the next authenticated
+call (no restart required, despite the message above which is a
+gentle hint for ops hygiene).</p>
+<p>Flags:</p>
+<ul>
+<li><code>--name N</code> — required. Operator-chosen label. Used in logs and audit.</li>
+<li><code>--scope S[,S...]</code> — comma-separated scopes. Default <code>send,read</code>.</li>
+</ul>
+<hr />
+<h2 id="token-revoke-id"><code>token revoke ID</code><a class="headerlink" href="#token-revoke-id" title="Permanent link">#</a></h2>
+<p>Marks a token as revoked. The next request using that token fails
+with 401 <code>Token has been revoked</code>. In-flight requests complete (we
+check at the start of the request, not mid-handler).</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>$<span class="w"> </span>skr-crypto<span class="w"> </span>token<span class="w"> </span>revoke<span class="w"> </span>8d7e6b
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Revoke<span class="w"> </span>token<span class="w"> </span>8d7e6b<span class="w"> </span><span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">&#39;backoffice-prod&#39;</span><span class="o">)</span>?<span class="w"> </span>Cannot<span class="w"> </span>be<span class="w"> </span>undone.<span class="w"> </span><span class="o">[</span>y/N<span class="o">]</span>:<span class="w"> </span>y
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>✓<span class="w"> </span>Revoked<span class="w"> </span>token<span class="w"> </span>8d7e6b
+</span></code></pre></div>
+<p>Idempotent — revoking an already-revoked token is a no-op.</p>
+<p>Flags:</p>
+<ul>
+<li><code>--yes</code> / <code>-y</code> — skip the confirmation prompt.</li>
+</ul>
+<hr />
+<h2 id="token-rotate-id"><code>token rotate ID</code><a class="headerlink" href="#token-rotate-id" title="Permanent link">#</a></h2>
+<p>Atomic create-new + revoke-old. Use when a token is suspected leaked
+but the service mustn't go down. The two tokens coexist long enough
+for callers to swap their config:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$<span class="w"> </span>skr-crypto<span class="w"> </span>token<span class="w"> </span>rotate<span class="w"> </span>8d7e6b
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>Rotate<span class="w"> </span>token<span class="w"> </span>8d7e6b<span class="w"> </span><span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">&#39;backoffice-prod&#39;</span><span class="o">)</span>?<span class="w"> </span>A<span class="w"> </span>new<span class="w"> </span>token<span class="w"> </span>replaces
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>it<span class="p">;</span><span class="w"> </span>the<span class="w"> </span>old<span class="w"> </span>one<span class="w"> </span>is<span class="w"> </span>revoked.<span class="w"> </span><span class="o">[</span>y/N<span class="o">]</span>:<span class="w"> </span>y
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>✓<span class="w"> </span>Rotated:<span class="w"> </span>revoked<span class="w"> </span><span class="nv">id</span><span class="o">=</span>8d7e6b,<span class="w"> </span>created<span class="w"> </span><span class="nv">id</span><span class="o">=</span>c3a4d5
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>⚠<span class="w"> </span>The<span class="w"> </span>new<span class="w"> </span>token<span class="w"> </span>is<span class="w"> </span>shown<span class="w"> </span>ONCE<span class="w"> </span>—<span class="w"> </span>copy<span class="w"> </span>it<span class="w"> </span>now.
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>skr_xK3pQ9aEoB1zT5fNgRwvMsHbY7uJL2dCiVy0n4mUjAr
+</span></code></pre></div>
+<p>The new token has the <strong>same name</strong> and <strong>same scopes</strong> as the old
+one. <code>created_by</code> on the new record points at the old token's id, so
+forensic queries can trace rotation chains.</p>
+<hr />
+<h2 id="recommended-workflow">Recommended workflow<a class="headerlink" href="#recommended-workflow" title="Permanent link">#</a></h2>
+<h3 id="first-time-setup-replacing-legacy-auth_token">First-time setup (replacing legacy <code>AUTH_TOKEN</code>)<a class="headerlink" href="#first-time-setup-replacing-legacy-auth_token" title="Permanent link">#</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># 1. Mint scoped tokens for each caller class.</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>skr-crypto<span class="w"> </span>token<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>backoffice-prod<span class="w"> </span>--scope<span class="w"> </span>send,read
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>skr-crypto<span class="w"> </span>token<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>dashboard<span class="w"> </span>--scope<span class="w"> </span><span class="nb">read</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>skr-crypto<span class="w"> </span>token<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>metrics-prom<span class="w"> </span>--scope<span class="w"> </span>metrics
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># 2. Distribute each plaintext to its respective consumer.</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">#    (Configure secret manager, redeploy callers, etc.)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># 3. Verify everything is using the new tokens.</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>skr-crypto<span class="w"> </span>token<span class="w"> </span>list<span class="w">   </span><span class="c1"># last_used_at should be recent for all three</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="c1"># 4. Drop legacy AUTH_TOKEN from .env + restart.</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c1">#    The deprecation warning stops appearing in service logs.</span>
+</span></code></pre></div>
+<h3 id="suspected-leak">Suspected leak<a class="headerlink" href="#suspected-leak" title="Permanent link">#</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>skr-crypto<span class="w"> </span>token<span class="w"> </span>rotate<span class="w"> </span>&lt;leaked-id&gt;
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># → distribute the new plaintext to the legitimate caller</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># → confirm legitimate traffic works</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># → leaked token already 401&#39;s (revoked atomically with rotation)</span>
+</span></code></pre></div>
+<hr />
+<h2 id="audit-attribution">Audit attribution<a class="headerlink" href="#audit-attribution" title="Permanent link">#</a></h2>
+<p>Every authenticated request now records a <code>token_id</code> in the audit
+record alongside <code>client_ip</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SEND_SUCCESS&quot;</span><span class="p">,</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;wallet&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cold&quot;</span><span class="p">,</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">&quot;from_address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TColdxxx...&quot;</span><span class="p">,</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nt">&quot;to_address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TRX9SbJ...&quot;</span><span class="p">,</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nt">&quot;amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;245.50&quot;</span><span class="p">,</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span><span class="nt">&quot;txid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="nt">&quot;idempotency_key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invoice-741&quot;</span><span class="p">,</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span><span class="nt">&quot;client_ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.42&quot;</span><span class="p">,</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span><span class="nt">&quot;token_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8d7e6b1234ab&quot;</span><span class="p">,</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;broadcast&quot;</span><span class="p">,</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;elapsed=1.43s risk=low&quot;</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Forensic queries that previously had to guess from IPs can now
+answer "which back-office service initiated this?" deterministically:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>grep<span class="w"> </span><span class="s1">&#39;&quot;token_id&quot;:&quot;8d7e6b1234ab&quot;&#39;</span><span class="w"> </span>data/audit.log<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># count of every action `backoffice-prod` ever triggered</span>
+</span></code></pre></div>
+<p>The legacy <code>AUTH_TOKEN</code> path records <code>token_id=legacy</code>.</p>
+<hr />
+<h2 id="failure-modes">Failure modes<a class="headerlink" href="#failure-modes" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>403 INSUFFICIENT_SCOPE</code></td>
+<td>Token valid but lacks the required scope for this endpoint</td>
+<td>Use a token with the right scope, or rotate this token to add scopes</td>
+</tr>
+<tr>
+<td><code>401 Token has been revoked</code></td>
+<td>Token was <code>revoke</code>d after the caller cached it</td>
+<td>Mint a new token + redeploy caller</td>
+</tr>
+<tr>
+<td><code>401 Invalid or missing X-API-Key</code></td>
+<td>Typo, expired wheel, plaintext lost</td>
+<td>Re-issue with <code>token create</code></td>
+</tr>
+<tr>
+<td><code>[AUTH] Legacy AUTH_TOKEN in use</code> (boot warning)</td>
+<td><code>AUTH_TOKEN</code> still in <code>.env</code></td>
+<td>Migrate callers to scoped tokens; remove <code>AUTH_TOKEN</code></td>
+</tr>
+<tr>
+<td><code>token commands require cryptography</code> (CLI error)</td>
+<td>Bare-CLI install without <code>[server]</code> extras</td>
+<td><code>pip install 'skr-crypto[server]'</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">#</a></h2>
+<ul>
+<li><a href="../../api-reference/#authentication">HTTP API: auth section</a> — wire format</li>
+<li><a href="../../security/#2-caller-code-with-the-api-token">Security model: caller with token</a> — threat model</li>
+<li><a href="../../adr/0008-per-caller-api-tokens/">ADR 0008</a> — design rationale + alternatives considered</li>
+</ul>
 
 
 
