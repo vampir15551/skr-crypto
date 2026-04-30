@@ -58,6 +58,7 @@ nav:
       - CLI:
           - Overview: commands/index.md
           - wallet: commands/wallet.md
+          - token: commands/token.md
           - Lifecycle: commands/lifecycle.md
           - Inspect: commands/inspect.md
           - Configuration: commands/configuration.md
@@ -77,6 +78,9 @@ nav:
       - 0004 — Audit hard-error: adr/0004-audit-hard-error.md
       - 0005 — Multi-wallet pool: adr/0005-multi-wallet-pool.md
       - 0006 — Encrypted keystore: adr/0006-encrypted-keystore.md
+      - 0007 — Engineering safety: adr/0007-engineering-safety-practices.md
+      - 0008 — Per-caller API tokens: adr/0008-per-caller-api-tokens.md
+      - 0009 — Token-bucket rate limiter: adr/0009-token-bucket-rate-limit.md
   - Changelog: changelog.md
 
 markdown_extensions:

@@ -1,6 +1,59 @@
 # HTTP API reference
 
-All endpoints are mounted under `/api/v1/`. Authentication is the `X-API-Key` header (constant-time compared to `AUTH_TOKEN`). Only `/api/v1/health/live` and `/api/v1/version` are unauthenticated — everything else returns `401` without a valid key.
+All endpoints are mounted under `/api/v1/`. Authentication is the `X-API-Key` header. Only `/api/v1/health/live` and `/api/v1/version` are unauthenticated — everything else returns `401` without a valid key.
+
+## Authentication
+
+Two paths, depending on which token style your `.env` is configured for:
+
+### Per-caller scoped tokens (1.5.0+, recommended)
+
+Mint via `skr-crypto token create --name X --scope send,read`. The plaintext is shown once; verification is constant-time against scrypt-hashed records in the SQLite store.
+
+Each token carries one or more **scopes**:
+
+| Scope | Endpoints | Implies |
+|---|---|---|
+| `admin` | every endpoint | `send`, `read`, `metrics` |
+| `send` | `POST /send` + read endpoints | `read` |
+| `read` | `/balance`, `/wallets`, `/risk`, `/health` | — |
+| `metrics` | `/metrics` only | — |
+
+Per-route scope requirements:
+
+| Endpoint | Required scope |
+|---|---|
+| `POST /api/v1/send` | `send` |
+| `GET /api/v1/balance` | `read` |
+| `GET /api/v1/wallets` | `read` |
+| `GET /api/v1/risk/{addr}` | `read` |
+| `GET /api/v1/health` | `read` |
+| `GET /api/v1/metrics` | `metrics` (or wider) |
+
+Scope failure returns **403 `INSUFFICIENT_SCOPE`** (distinct from 401):
+
+```json
+{
+  "detail": {
+    "error": "token requires scope 'send'; this token has ['read']",
+    "code": "INSUFFICIENT_SCOPE",
+    "required_scope": "send",
+    "token_scopes": ["read"]
+  }
+}
+```
+
+Revocation is database-backed; a `skr-crypto token revoke <id>` call invalidates the token on the next request without restarting the service.
+
+Token operations: see [`skr-crypto token`](commands/token.md).
+
+Design rationale: [ADR 0008](adr/0008-per-caller-api-tokens.md).
+
+### Legacy `AUTH_TOKEN` (1.0–1.4 compatibility)
+
+If `AUTH_TOKEN` is set in `.env`, it works as a synthetic admin token (`token_id=legacy`). A deprecation warning is logged once at boot. To be removed in 2.0.
+
+Existing single-token deployments continue working unchanged — the legacy path is a `hmac.compare_digest` short-circuit before the per-token store is consulted.
 
 The base URL in examples below is `http://127.0.0.1:8000`. In production the service binds to localhost and a reverse proxy (Caddy / nginx / Cloudflare) terminates TLS in front.
 
@@ -293,6 +346,8 @@ Send USDT TRC-20. The big one.
 | 400 | `ENERGY_TOO_EXPENSIVE` | estimated burn > `MAX_ENERGY_BURN_TRX` (stake or rent energy) |
 | 400 | `RISK_TOO_HIGH` | recipient verdict ≥ `RISK_BLOCK_LEVEL`. Body includes full report. |
 | 401 | — | missing or invalid `X-API-Key` |
+| 401 | — | `Token has been revoked` (1.5.0+) |
+| 403 | `INSUFFICIENT_SCOPE` | token valid but lacks `send` scope (1.5.0+) |
 | 404 | `WALLET_NOT_FOUND` | `wallet` field doesn't match any pool entry |
 | 409 | `IDEMPOTENCY_CONFLICT` | another request with this key is in flight |
 | 409 | `IDEMPOTENCY_UNRESOLVED` | crashed prior run left this key in `UNKNOWN` state — manual reconcile required |
@@ -424,6 +479,7 @@ The `code` field is the contract. It's stable across minor versions; values adde
 | `AUDIT_WRITE_FAILED` | 500 | 1.1.0 |
 | `WALLET_POOL_EMPTY` | 503 | 1.4.0 |
 | `WALLET_AUTOPICK_FAILED` | 503 | 1.4.0 |
+| `INSUFFICIENT_SCOPE` | 403 | 1.5.0 |
 | `PAYOUT_ERROR` | 500 | (catch-all parent — should never appear if the service is correct) |
 
 The CLI maps these to stable exit codes (`skr_crypto/cli/exceptions.py`).

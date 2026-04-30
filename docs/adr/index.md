@@ -17,6 +17,9 @@ warrant one.
 | [0004](0004-audit-hard-error.md) | Audit write failure is a hard error, not a warning | A failed `_write_durable` raises `AuditWriteError`, releases the idempotency slot, and returns `HTTP 500` to the client; the broadcast does not happen. |
 | [0005](0005-multi-wallet-pool.md) | Multi-wallet routing via WalletPool with auto-pick by max USDT | Service holds N keys; every signing op resolves through `wallets.resolve(name)`; auto-pick by USDT when `wallet=` is omitted. |
 | [0006](0006-encrypted-keystore.md) | Encrypted-file keystore: AES-256-GCM + scrypt + per-entry IV with name-bound AAD | Single chmod-600 JSON file holds N wallets behind one passphrase; replaces 1Password as the recommended container-friendly backend. |
+| [0007](0007-engineering-safety-practices.md) | Engineering safety practices for the money path | Invariant tests, threat-model tests, wire-format goldens, property-based fuzz, CHANGELOG/invariant CI gates, CODEOWNERS protection, canary deploy. |
+| [0008](0008-per-caller-api-tokens.md) | Per-caller API tokens with scopes | Token store with scrypt-hashed entries; scopes admin/send/read/metrics; `AUTH_TOKEN` kept as legacy compat shim for 1.x. |
+| [0009](0009-token-bucket-rate-limit.md) | Persisted token-bucket rate limiter | Replaces in-memory sliding window with SQLite-backed token bucket keyed by both IP and token ID. (Implementation deferred to 1.6.0; ADR ships in 1.5.0.) |
 
 ## Format
 

@@ -41,6 +41,7 @@ Each record is one line of JSON. The file is append-only; nothing is ever rewrit
 | `txid` | string | On-chain txid; empty for events before broadcast. |
 | `idempotency_key` | string | Caller-provided. |
 | `client_ip` | string | Direct peer or X-Forwarded-For first hop (if `TRUSTED_PROXIES` matches). |
+| `token_id` | string | API-token id that initiated the action (1.5.0+). `"legacy"` for the deprecated `AUTH_TOKEN` path. Empty for unauthenticated events (rare). |
 | `result` | string | Free-form; values per event listed below. |
 | `details` | string | Free-form context. Optional — only present when relevant. |
 
