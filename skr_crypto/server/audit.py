@@ -164,6 +164,16 @@ def record(
     audit_log.info(line)
     # And, if configured, write durably so a crash can't lose the trail.
     _write_durable(line)
+    # Webhooks (1.7.0+) — best-effort, never raises. The audit log is
+    # the source of truth; a failed enqueue is logged but never 5xx's
+    # the /send caller.
+    try:
+        from skr_crypto.server import webhooks
+        webhooks.enqueue_event_for_delivery(entry["id"], event, entry)
+    except Exception as exc:
+        # Don't import-fail the rest of audit if webhooks isn't loaded
+        # for some reason (test scenarios).
+        audit_log.warning("webhook enqueue raised: %s", exc)
 
 
 def close_audit_file() -> None:

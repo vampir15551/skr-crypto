@@ -76,6 +76,7 @@ def _register() -> None:
         update,
         version_cmd,
         wallet,
+        webhook,
     )
 
     cli.add_command(install.cmd)
@@ -94,6 +95,7 @@ def _register() -> None:
     cli.add_command(keygen.cmd)
     cli.add_command(wallet.group)
     cli.add_command(token.group)
+    cli.add_command(webhook.group)
     cli.add_command(backup.cmd)
     cli.add_command(restore.cmd)
     cli.add_command(doctor.cmd)

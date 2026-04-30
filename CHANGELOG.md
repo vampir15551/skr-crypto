@@ -9,6 +9,55 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-04-30
+
+The "near-real-time event delivery" release. Adds opt-in HTTP webhooks
+for audit events with HMAC-SHA256 signing, persistent delivery state,
+bounded retry policy, and a CLI for setup / testing / replay. The
+audit log remains the source of truth — webhooks are a derived
+notification channel.
+
+### Added — Opt-in webhooks (ADR 0011)
+
+- **`skr_crypto.server.webhooks`** — daemon-thread worker, persistent
+  `webhook_deliveries` SQLite table, HMAC-SHA256 signing with
+  timestamp-bounded replay protection.
+- **HMAC-signed payloads.** Header format
+  `X-SKR-Signature: t=<unix>,v1=<sha256-hex>`. Receivers verify both
+  the signature and that `now - t < tolerance` (default 300s).
+- **Bounded retry policy.** Default schedule: 0s, 30s, 2m, 10m, 1h.
+  After exhaustion, delivery is `giving_up` and a `WEBHOOK_GIVEUP`
+  audit event is written so the operator gets a signal.
+- **Event filter.** Default `WEBHOOK_EVENTS=SEND_*,RECEIPT_RESOLVED` —
+  internal events (STARTUP_CHECK, etc.) are NOT delivered.
+- **`skr-crypto webhook` CLI subgroup**: `setup` (generate signing
+  secret), `test URL` (synthetic round-trip), `list-deliveries`
+  (recent attempts + status), `retry ID` (force-retry a giving_up
+  delivery).
+- **Configurable via env**:
+  - `WEBHOOK_URLS` — comma-separated targets (empty = disabled)
+  - `WEBHOOK_SIGNING_SECRET` — 32+ random bytes hex
+  - `WEBHOOK_EVENTS` — event-name allowlist
+  - `WEBHOOK_BACKOFF_SCHEDULE` — comma-separated retry delays
+  - `WEBHOOK_TIMEOUT_SEC`, `WEBHOOK_TIMESTAMP_TOLERANCE_SEC`,
+    `WEBHOOK_WORKER_INTERVAL_SEC`
+
+### Money-path invariants (tested)
+
+- `test_send_does_not_block_on_webhook` — a slow / dead receiver
+  must NOT delay /send. ENQUEUE is just a SQLite INSERT; the HTTP
+  POST is on a daemon thread.
+- HMAC verification rejects: wrong secret, tampered body, malformed
+  header, stale timestamp.
+- Retry exhaustion produces a `WEBHOOK_GIVEUP` audit event.
+- Force-retry refuses to reset `delivered` deliveries.
+- Persistence survives restart (delivery state on SQLite WAL).
+
+### Engineering metrics
+
+- 482 → **500 tests passing** (+18 webhook tests including invariants)
+- ruff clean, mkdocs strict clean, bandit 0 high
+
 ## [1.6.0] — 2026-04-30
 
 The "what actually happened on-chain?" release. Adds a postmortem-only

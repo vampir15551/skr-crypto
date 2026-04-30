@@ -48,6 +48,10 @@ from skr_crypto.server.shutdown import mark_started, reset_timer
 from skr_crypto.server.tokens import init_token_store
 from skr_crypto.server.tron_client import tron
 from skr_crypto.server.wallet_pool import wallets
+from skr_crypto.server.webhooks import (
+    init_webhooks,
+    shutdown_webhooks,
+)
 
 log = logging.getLogger("payouts")
 
@@ -115,6 +119,24 @@ async def lifespan(_app: FastAPI):
     # Receipt poller (postmortem only — never retries broadcasts).
     # See ADR 0010.
     init_poller(IDEMPOTENCY_DB_PATH or None, tron)
+    # Webhooks (opt-in via WEBHOOK_URLS). See ADR 0011.
+    from skr_crypto.server.config import (
+        WEBHOOK_BACKOFF_SCHEDULE,
+        WEBHOOK_EVENTS,
+        WEBHOOK_SIGNING_SECRET,
+        WEBHOOK_TIMEOUT_SEC,
+        WEBHOOK_URLS,
+        WEBHOOK_WORKER_INTERVAL_SEC,
+    )
+    init_webhooks(
+        db_path=IDEMPOTENCY_DB_PATH or None,
+        urls=WEBHOOK_URLS,
+        signing_secret=WEBHOOK_SIGNING_SECRET,
+        event_filter=WEBHOOK_EVENTS,
+        backoff_schedule=WEBHOOK_BACKOFF_SCHEDULE,
+        timeout_sec=WEBHOOK_TIMEOUT_SEC,
+        interval_sec=WEBHOOK_WORKER_INTERVAL_SEC,
+    )
     mark_started()
     reset_timer()
     # Refresh the OFAC SDN sanctions list (best-effort). The list is
@@ -139,6 +161,7 @@ async def lifespan(_app: FastAPI):
     log.info("Payout service ready")
     yield
     log.info("Payout service stopping")
+    shutdown_webhooks()
     shutdown_poller()
     shutdown_rate_limiter()
     wallets.destroy()

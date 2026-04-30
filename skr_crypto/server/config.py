@@ -237,6 +237,46 @@ RECEIPT_NOT_FOUND_GIVEUP_HOURS: float = float(
 )
 
 # ---------------------------------------------------------------------------
+# Webhooks (1.7.0+, ADR 0011) — opt-in
+# ---------------------------------------------------------------------------
+# Comma-separated URLs. Empty = webhooks disabled. Each event is POSTed
+# to every URL in parallel (independently retried).
+WEBHOOK_URLS: tuple[str, ...] = tuple(
+    u.strip() for u in os.getenv("WEBHOOK_URLS", "").split(",") if u.strip()
+)
+# 32+ random bytes hex. Used as HMAC-SHA256 key. Receiver MUST verify
+# X-SKR-Signature against this. `skr-crypto webhook setup` generates one.
+WEBHOOK_SIGNING_SECRET: str = os.getenv("WEBHOOK_SIGNING_SECRET", "")
+# Comma-separated audit event names that trigger webhook delivery.
+# Defaults to the financially-relevant subset.
+WEBHOOK_EVENTS: tuple[str, ...] = tuple(
+    e.strip() for e in os.getenv(
+        "WEBHOOK_EVENTS",
+        "SEND_SUCCESS,SEND_REJECTED,SEND_FAILED,SEND_DUPLICATE,RECEIPT_RESOLVED",
+    ).split(",") if e.strip()
+)
+# Per-attempt HTTP timeout (seconds).
+WEBHOOK_TIMEOUT_SEC: float = float(os.getenv("WEBHOOK_TIMEOUT_SEC", "10"))
+# Backoff schedule in seconds (comma-separated). After the last entry,
+# delivery is marked giving_up and a WEBHOOK_GIVEUP audit event is
+# written. Default: 0, 30, 120, 600, 3600 = 5 attempts over ~1 hour.
+WEBHOOK_BACKOFF_SCHEDULE: tuple[float, ...] = tuple(
+    float(x.strip()) for x in os.getenv(
+        "WEBHOOK_BACKOFF_SCHEDULE", "0,30,120,600,3600",
+    ).split(",") if x.strip()
+)
+# Replay-attack tolerance: how stale an X-SKR-Signature timestamp can be.
+# We document this number; receivers MUST verify against it.
+WEBHOOK_TIMESTAMP_TOLERANCE_SEC: int = int(
+    os.getenv("WEBHOOK_TIMESTAMP_TOLERANCE_SEC", "300")
+)
+# Worker-thread tick interval (seconds). The worker reads pending
+# deliveries off SQLite and POSTs them.
+WEBHOOK_WORKER_INTERVAL_SEC: float = float(
+    os.getenv("WEBHOOK_WORKER_INTERVAL_SEC", "1.0")
+)
+
+# ---------------------------------------------------------------------------
 # LAN detection
 # ---------------------------------------------------------------------------
 LAN_SUBNETS = ("192.168.88.", "192.168.89.")
