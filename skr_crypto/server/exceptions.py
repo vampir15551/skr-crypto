@@ -60,6 +60,45 @@ class EnergyTooExpensive(PayoutError):
         )
 
 
+class WalletNotFoundError(PayoutError):
+    """Caller asked for a wallet name not configured at startup.
+
+    The available names are attached so the caller's error handler can
+    suggest what to retry with — operators occasionally typo a name.
+    """
+
+    def __init__(self, name: str, available: list[str]):
+        self.name = name
+        self.available = list(available)
+        super().__init__(
+            f"Wallet {name!r} not found. Available: "
+            f"{', '.join(available) or 'none'}",
+            code="WALLET_NOT_FOUND",
+        )
+
+
+class WalletPoolEmptyError(PayoutError):
+    """Service was started without any wallets in the pool."""
+
+    def __init__(self):
+        super().__init__(
+            "No wallets configured — the service cannot sign transactions",
+            code="WALLET_POOL_EMPTY",
+        )
+
+
+class WalletAutoPickFailed(PayoutError):
+    """Multi-wallet auto-pick path could not fetch any balance.
+
+    The /send endpoint raises this when ``wallet`` was omitted, the pool
+    has multiple wallets, AND every USDT balance lookup failed (every
+    TronGrid RPC errored or timed out). Forces the caller to retry — the
+    service does NOT silently pick one wallet over another."""
+
+    def __init__(self, message: str = "could not fetch balances for any wallet"):
+        super().__init__(message, code="WALLET_AUTOPICK_FAILED")
+
+
 class RiskTooHigh(PayoutError):
     """Recipient address tripped the wallet-risk preflight at or above
     the configured ``RISK_BLOCK_LEVEL``.

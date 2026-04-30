@@ -18,7 +18,7 @@ def _setup_low_risk(mock_tron):
         "create_time": 1700000000_000,
     })
     mock_tron.client.get_contract = MagicMock(side_effect=Exception("no contract"))
-    mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+    mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
     mock_tron.get_destination_info = MagicMock(return_value={
         "exists": True,
         "trx_balance": Decimal("1"),
@@ -48,7 +48,7 @@ class TestRiskEndpoint:
 
     def test_blacklisted_returns_high(self, client, auth_headers, mock_tron):
         _setup_low_risk(mock_tron)
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
         resp = client.get(f"/api/v1/risk/{VALID}", headers=auth_headers)
         assert resp.status_code == 200
         body = resp.json()
@@ -95,7 +95,7 @@ class TestSendRiskPreflight:
 
     def test_high_risk_send_blocked(self, client, auth_headers, mock_tron):
         _setup_low_risk(mock_tron)
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
         resp = self._post(client, auth_headers)
         assert resp.status_code == 400
         body = resp.json()
@@ -121,7 +121,7 @@ class TestSendRiskPreflight:
         switching the destination."""
         from skr_crypto.server.idempotency import idempotency
         _setup_low_risk(mock_tron)
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
         resp = self._post(client, auth_headers, key="key-not-poisoned")
         assert resp.status_code == 400
         # peek() should return None — slot was never reserved (we block
@@ -144,7 +144,7 @@ class TestRiskBlockLevelNone:
         import skr_crypto.server.routes as routes_mod
         monkeypatch.setattr(routes_mod, "RISK_BLOCK_LEVEL", "none")
         _setup_low_risk(mock_tron)
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
         resp = client.post(
             "/api/v1/send",
             headers=auth_headers,

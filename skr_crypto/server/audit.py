@@ -118,6 +118,7 @@ def _write_durable(line: str) -> None:
 def record(
     event: str,
     *,
+    wallet: str = "",
     from_address: str = "",
     to_address: str = "",
     amount: str = "",
@@ -132,11 +133,16 @@ def record(
 
     This is separate from operational logs — audit records are the
     immutable trail of every financial action for compliance.
+
+    The ``wallet`` field (added in 1.4.0 for multi-wallet awareness)
+    carries the operator-friendly source-wallet name. ``from_address``
+    is still recorded — they're complementary, not redundant.
     """
     entry = {
         "id": _next_record_id(),
         "timestamp": datetime.now(UTC).isoformat(),
         "event": event,
+        "wallet": wallet,
         "from_address": from_address,
         "to_address": to_address,
         "amount": amount,

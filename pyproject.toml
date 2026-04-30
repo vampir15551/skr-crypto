@@ -57,6 +57,10 @@ server = [
     "tronpy==0.5.0",
     "base58==2.1.1",
     "prometheus-client>=0.21,<1.0",
+    # AES-256-GCM + scrypt for the encrypted_file key provider. Pure
+    # Python wheels exist for every platform; the C extensions ship
+    # statically linked. No system openssl-dev required at install.
+    "cryptography>=42.0,<46.0",
 ]
 dev = [
     "pytest>=8.0",

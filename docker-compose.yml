@@ -1,21 +1,35 @@
 # docker-compose.yml — single-instance deploy.
 #
-# Usage:
-#   1. Pick a key provider that does NOT require 1Password CLI inside
-#      the container. Realistic options:
-#        - KEY_PROVIDER=env  + PRIVATE_KEY_HEX  (set via secret manager)
-#        - KEY_PROVIDER=file + PRIVATE_KEY_FILE mounted read-only at chmod 600
-#   2. cp .env.example .env, fill in via scripts/setup.py or by hand.
-#   3. docker compose up -d
+# Three viable key-provider patterns inside a container. Pick one:
+#
+# 1. KEY_PROVIDER=encrypted_file  (RECOMMENDED for Docker — multi-wallet,
+#    no extra services, passphrase decoupled from key file)
+#      - Bind-mount data/ where the keystore lives.
+#      - Provide the passphrase via either:
+#          a. KEY_PASSPHRASE env var (Compose secret, k8s Secret), or
+#          b. KEY_PASSPHRASE_FILE pointing at a chmod-600 file mounted
+#             read-only.
+#      - Initialise the keystore once on the host:
+#          skr-crypto wallet encrypt -o data/keystore.json
+#          skr-crypto wallet generate main
+#
+# 2. KEY_PROVIDER=env + PRIVATE_KEY_HEX
+#      - Simplest. Inject via the orchestrator's secret store. Rotate by
+#        redeploy. Single wallet only (multi-wallet via WALLET_<NAME>_*).
+#
+# 3. KEY_PROVIDER=file + PRIVATE_KEY_FILE
+#      - Mount the chmod-600 key file read-only. Single wallet only.
+#
+# 1Password and Keychain backends do NOT work inside a container — there
+# is no Touch ID / op signin / macOS Keychain in a Linux image.
 #
 # Notes:
-#   - The `data` volume holds audit.log + idempotency.db. Back it up.
-#     The service refuses to broadcast if audit fsync fails (by design).
-#   - Auto-shutdown is OFF in container deploys. We rely on the
-#     orchestrator to restart on healthcheck failure instead.
-#   - If you mount a key file from the host, mount it read-only (`:ro`)
-#     and ensure host-side chmod 600. The image runs as appuser
-#     (uid 1000); the file must be readable by that uid.
+#   - The `data` volume holds keystore.json + audit.log + idempotency.db.
+#     Back it up. The service refuses to broadcast if audit fsync fails.
+#   - Auto-shutdown is OFF in container deploys; the orchestrator handles
+#     restart on healthcheck failure.
+#   - The image runs as appuser (uid 1000); host-side files must be
+#     readable by that uid.
 
 services:
   skr-crypto:
@@ -36,6 +50,10 @@ services:
       SKR_CRYPTO_HOME: /var/lib/skr-crypto
       # Disable auto-shutdown; orchestrator handles lifecycle.
       SHUTDOWN_TIMEOUT: "31536000"  # ~1 year — effectively off
+      # Keystore lives on the bind-mounted data volume so a fresh
+      # container picks up the existing keys. Override KEY_PROVIDER /
+      # KEYSTORE_FILE in .env for a different layout.
+      KEYSTORE_FILE: /var/lib/skr-crypto/data/keystore.json
 
     ports:
       # Bind to localhost only — Caddy / reverse proxy on the host
@@ -47,6 +65,8 @@ services:
       - ./data:/var/lib/skr-crypto/data
       # If KEY_PROVIDER=file, mount the key like this (uncomment + adjust):
       # - /etc/skr-crypto/treasury.key:/run/secrets/treasury.key:ro
+      # If using KEY_PASSPHRASE_FILE, mount the passphrase the same way:
+      # - /etc/skr-crypto/keystore.pass:/run/secrets/keystore.pass:ro
 
     healthcheck:
       test: ["CMD", "curl", "-f", "-s", "http://127.0.0.1:8000/api/v1/health/live"]

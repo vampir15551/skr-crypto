@@ -141,7 +141,7 @@ class TestAuditInRoutes:
         assert any(e["event"] == "SEND_DUPLICATE" for e in audit_entries)
 
     def test_send_rejected_emits_audit(self, client, auth_headers, mock_tron, caplog):
-        mock_tron.get_usdt_balance = MagicMock(return_value=Decimal("1"))
+        mock_tron.get_usdt_balance_for = MagicMock(return_value=Decimal("1"))
 
         with caplog.at_level(logging.INFO, logger="payouts.audit"):
             resp = client.post("/api/v1/send", json={

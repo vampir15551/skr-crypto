@@ -100,7 +100,7 @@ class TestCounterWiring:
     def test_insufficient_usdt_increments_rejected(
         self, client, auth_headers, mock_tron,
     ):
-        mock_tron.get_usdt_balance = MagicMock(return_value=Decimal("1"))
+        mock_tron.get_usdt_balance_for = MagicMock(return_value=Decimal("1"))
         client.post("/api/v1/send", json={
             "to_address": VALID_ADDRESS,
             "amount": "1000",
@@ -127,15 +127,15 @@ class TestCounterWiring:
 
 class TestGaugesFromBalance:
     def test_balance_endpoint_updates_gauges(self, client, auth_headers, mock_tron):
-        mock_tron.get_resource_summary = MagicMock(return_value={
+        mock_tron.get_resource_summary_for = MagicMock(return_value={
             "energy_available": 7777,
             "energy_limit": 10_000,
             "bandwidth_free_available": 321,
             "bandwidth_paid_available": 42,
             "tron_power": 99,
         })
-        mock_tron.get_trx_balance = MagicMock(return_value=Decimal("555"))
-        mock_tron.get_usdt_balance = MagicMock(return_value=Decimal("12345.6"))
+        mock_tron.get_trx_balance_for = MagicMock(return_value=Decimal("555"))
+        mock_tron.get_usdt_balance_for = MagicMock(return_value=Decimal("12345.6"))
 
         client.get("/api/v1/balance", headers=auth_headers)
 

@@ -1,5 +1,5 @@
-site_name: SKR Crypto CLI
-site_description: Operator CLI for the SKR Crypto microservice fleet.
+site_name: SKR Crypto
+site_description: USDT TRC-20 treasury — synchronous payouts service plus operator CLI in one package.
 site_url: https://vampir15551.github.io/skr-crypto/
 repo_url: https://github.com/vampir15551/skr-crypto
 edit_uri: edit/main/docs/
@@ -8,53 +8,116 @@ theme:
   name: material
   features:
     - navigation.instant
+    - navigation.tracking
     - navigation.sections
-    - navigation.expand
+    - navigation.top
     - navigation.indexes
+    - toc.follow
     - content.code.copy
+    - content.code.annotate
     - content.action.edit
+    - content.tabs.link
     - search.suggest
     - search.highlight
+    - search.share
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: deep orange
+      accent: deep orange
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: deep orange
+      accent: deep orange
       toggle:
         icon: material/weather-night
         name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
 
 nav:
   - Home: index.md
-  - Install: install.md
-  - Commands:
-      - Overview: commands/index.md
-      - Lifecycle: commands/lifecycle.md
-      - Inspect: commands/inspect.md
-      - Configuration: commands/configuration.md
-      - Backups: commands/backups.md
-      - Diagnostics: commands/diagnostics.md
-  - Configuration: configuration.md
-  - Security: security.md
-  - Releases: releases.md
+  - Quick start:
+      - Local on Mac: deployment/local-mac.md
+      - Docker: deployment/docker.md
+      - VPS + systemd: deployment/systemd-vps.md
+      - Install wizard: install.md
+  - Concepts:
+      - Architecture: architecture.md
+      - Multi-wallet pool: multi-wallet.md
+      - Key providers: key-providers.md
+      - Encrypted keystore format: keystore-format.md
+      - Risk preflight: risk-preflight.md
+      - Idempotency: idempotency.md
+      - Audit log: audit-log.md
+  - Reference:
+      - HTTP API: api-reference.md
+      - CLI:
+          - Overview: commands/index.md
+          - wallet: commands/wallet.md
+          - Lifecycle: commands/lifecycle.md
+          - Inspect: commands/inspect.md
+          - Configuration: commands/configuration.md
+          - Backups: commands/backups.md
+          - Diagnostics: commands/diagnostics.md
+      - Configuration vars: configuration.md
+      - Monitoring & metrics: monitoring.md
+  - Operations:
+      - Security model: security.md
+      - Migrating to 1.4: migration-1.4.md
+      - Releasing: releases.md
+  - ADRs:
+      - Index: adr/index.md
+      - 0001 — Sync-only architecture: adr/0001-sync-only-architecture.md
+      - 0002 — Pluggable key providers: adr/0002-pluggable-key-providers.md
+      - 0003 — MSK-day reconciliation: adr/0003-msk-day-reconciliation.md
+      - 0004 — Audit hard-error: adr/0004-audit-hard-error.md
+      - 0005 — Multi-wallet pool: adr/0005-multi-wallet-pool.md
+      - 0006 — Encrypted keystore: adr/0006-encrypted-keystore.md
   - Changelog: changelog.md
 
 markdown_extensions:
+  - abbr
   - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
   - tables
   - toc:
       permalink: "#"
+      toc_depth: 3
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
-  - pymdownx.details
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 
 extra:
   social:

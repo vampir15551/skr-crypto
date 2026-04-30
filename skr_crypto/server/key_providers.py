@@ -1,24 +1,42 @@
-"""Pluggable secret backends for the TRON treasury private key.
+"""Pluggable secret backends for TRON treasury private keys.
 
-The service supports four backends, selected via ``KEY_PROVIDER``:
+Five backends, selected via ``KEY_PROVIDER``:
 
-  - ``1password`` — the historical default. Uses the 1Password CLI (``op``).
-    Key never lives on disk; requires biometric/touch unlock at start.
-    Best for an operator-on-laptop scenario.
-  - ``env`` — read raw hex from the ``PRIVATE_KEY_HEX`` env var.
-    Simplest backend; key lives in the environment of the process.
-    Best for containers / orchestrators that already inject secrets.
-  - ``file`` — read raw hex from ``PRIVATE_KEY_FILE``.
-    File must be ``chmod 600``; we refuse to load otherwise.
-    Best for plain VPS deployments behind systemd.
-  - ``keychain`` — read from the macOS Keychain (``security find-generic-password``).
-    Service: ``KEYCHAIN_SERVICE`` (default "payouts"), account:
-    ``KEYCHAIN_ACCOUNT`` (default "treasury").
-    Best for local dev on a mac without 1Password.
+  - ``1password``      — 1Password CLI (``op``). Operator-on-laptop default.
+  - ``env``            — raw hex in env vars. Container / orchestrator-friendly.
+  - ``file``           — raw hex in chmod-600 file(s). Plain-VPS friendly.
+  - ``keychain``       — macOS Keychain. Local dev on a mac without 1Password.
+  - ``encrypted_file`` — single AES-256-GCM + scrypt JSON file holding any
+                         number of keys behind one passphrase. Works in
+                         containers without 1Password / Keychain.
 
-All providers return a 32-byte ``bytearray`` so the caller can ``wipe_bytearray``
-once the key is loaded into the signing object. See ``security.py`` for a
-realistic disclosure of what wiping bytes in CPython actually buys you.
+All providers expose ``load_wallets() -> list[LoadedWallet]``. ``LoadedWallet``
+carries the wallet's name, an advertised address (best-effort, may be ""),
+and a 32-byte ``bytearray`` containing the raw private key. The caller is
+responsible for ``wipe`` ing each ``raw_key`` once it's been loaded into a
+``tronpy.PrivateKey`` (``security.load_wallets`` does this).
+
+Multi-wallet config:
+
+  - **encrypted_file** is multi-wallet by construction — the file is a JSON
+    array of encrypted entries.
+  - For ``env`` / ``file`` / ``1password`` / ``keychain``, multi-wallet is
+    opt-in via ``WALLETS=name1,name2,name3``. For each name, the provider
+    reads a per-name env var or per-name address into the secret store:
+
+        env:        WALLET_<NAME>_PRIVATE_KEY_HEX    (uppercased)
+        file:       WALLET_<NAME>_PRIVATE_KEY_FILE
+        1password:  WALLET_<NAME>_OP_ITEM            (vault from OP_VAULT)
+        keychain:   WALLET_<NAME>_KEYCHAIN_ACCOUNT   (service from KEYCHAIN_SERVICE)
+
+  - **Legacy single-wallet** (no ``WALLETS`` env var) keeps working
+    unchanged. The legacy globals (``PRIVATE_KEY_HEX``, ``PRIVATE_KEY_FILE``,
+    ``OP_ITEM``, ``KEYCHAIN_ACCOUNT``) are loaded as a single wallet named
+    ``"default"``.
+
+Wiping caveats are documented in ``security.py`` — short version: the
+``bytearray`` is zeroed, but any prior CPython interning is out of our
+hands, so we minimise hex→str round-trips wherever possible.
 """
 from __future__ import annotations
 
@@ -26,28 +44,61 @@ import logging
 import os
 import subprocess
 import sys
+from dataclasses import dataclass
 from typing import Protocol
 
 from skr_crypto.server.config import (
+    KEY_PASSPHRASE_FILE,
     KEY_PROVIDER,
     KEYCHAIN_ACCOUNT,
     KEYCHAIN_SERVICE,
+    KEYSTORE_FILE,
     OP_FIELD,
     OP_ITEM,
     OP_VAULT,
     PRIVATE_KEY_FILE,
+    WALLETS,
 )
 
 log = logging.getLogger("payouts")
 
+DEFAULT_WALLET_NAME = "default"
+
 
 # ---------------------------------------------------------------------------
-# Common helpers
+# Common types
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class LoadedWallet:
+    """Provider output. ``raw_key`` is a 32-byte mutable bytearray that
+    the caller must wipe after constructing a tronpy ``PrivateKey``.
+
+    ``address`` is a best-effort hint from the provider (e.g. the address
+    field stored alongside the encrypted key). It is NOT authoritative —
+    the caller derives the canonical address from the private key and
+    cross-checks. If the provider has no hint, it leaves this empty.
+    """
+    name: str
+    raw_key: bytearray
+    address: str = ""
+
+
+class KeyProvider(Protocol):
+    """Loads zero-or-more TRON private keys."""
+
+    def load_wallets(self) -> list[LoadedWallet]: ...
+
+    def lock(self) -> None: ...
+
+
+# ---------------------------------------------------------------------------
+# Helpers
 # ---------------------------------------------------------------------------
 
 
 def _wipe(buf: bytearray) -> None:
-    """Overwrite a bytearray with zeros."""
     for i in range(len(buf)):
         buf[i] = 0
 
@@ -82,37 +133,76 @@ def _decode_hex_to_bytes(raw: bytearray, source_label: str) -> bytearray:
     return key_bytes
 
 
+def _wallet_names_from_config() -> list[str]:
+    """Parse the ``WALLETS`` env var into a list of valid wallet names.
+
+    Returns [] if the env var is unset/empty (signals "use legacy
+    single-wallet config"). Names must be ASCII identifiers — we use them
+    in env var suffixes and JSON keys, both of which intersect badly with
+    fancy unicode."""
+    raw = (WALLETS or "").strip()
+    if not raw:
+        return []
+    names: list[str] = []
+    for part in raw.split(","):
+        n = part.strip()
+        if not n:
+            continue
+        if not n.replace("_", "").replace("-", "").isalnum():
+            log.error(
+                "Invalid wallet name %r in WALLETS — use letters/digits/_/- only",
+                n,
+            )
+            sys.exit(1)
+        if n in names:
+            log.error("Duplicate wallet name %r in WALLETS", n)
+            sys.exit(1)
+        names.append(n)
+    return names
+
+
+def _env_var_for(name: str, suffix: str) -> str:
+    """Compose ``WALLET_<NAME>_<SUFFIX>`` with name uppercased.
+
+    Hyphens map to underscores so ``main-treasury`` becomes
+    ``WALLET_MAIN_TREASURY_PRIVATE_KEY_HEX``."""
+    safe = name.upper().replace("-", "_")
+    return f"WALLET_{safe}_{suffix}"
+
+
 # ---------------------------------------------------------------------------
-# Provider protocol + implementations
+# Provider implementations
 # ---------------------------------------------------------------------------
-
-
-class KeyProvider(Protocol):
-    """Loads a TRON private key and optionally locks the underlying secret store.
-
-    Implementations must:
-      - Return a 32-byte ``bytearray`` from ``get_private_key``.
-      - Never log the key (or any prefix of it).
-      - ``lock`` is best-effort and called at process exit.
-    """
-
-    def get_private_key(self) -> bytearray: ...
-
-    def lock(self) -> None: ...
 
 
 class OnePasswordKeyProvider:
-    """Read the key from the 1Password CLI.
+    """Read keys from the 1Password CLI.
 
-    Requires ``op`` on PATH and an unlocked session (``op signin``).
-    Uses ``--reveal`` and reads stdout as raw bytes (``text=False``) to
-    avoid CPython codec/intern buffers leaving copies on the heap.
-    """
+    Multi-wallet: if ``WALLETS`` is set, each wallet's item name comes
+    from ``WALLET_<NAME>_OP_ITEM``. Single vault for everything (most
+    teams keep treasury keys together)."""
 
-    def get_private_key(self) -> bytearray:
+    def load_wallets(self) -> list[LoadedWallet]:
+        names = _wallet_names_from_config()
+        if not names:
+            return [self._fetch(DEFAULT_WALLET_NAME, OP_ITEM)]
+        out: list[LoadedWallet] = []
+        for n in names:
+            item = os.environ.get(_env_var_for(n, "OP_ITEM"), "")
+            if not item:
+                log.error(
+                    "KEY_PROVIDER=1password: %s not set "
+                    "(needed because WALLETS includes %r)",
+                    _env_var_for(n, "OP_ITEM"), n,
+                )
+                sys.exit(1)
+            out.append(self._fetch(n, item))
+        return out
+
+    def _fetch(self, wallet_name: str, op_item: str) -> LoadedWallet:
         try:
             result = subprocess.run(
-                ["op", "item", "get", OP_ITEM, "--vault", OP_VAULT,
+                ["op", "item", "get", op_item, "--vault", OP_VAULT,
                  "--fields", OP_FIELD, "--reveal"],
                 capture_output=True,
                 text=False,
@@ -127,20 +217,24 @@ class OnePasswordKeyProvider:
 
         if result.returncode != 0:
             stderr = (result.stderr or b"").decode("utf-8", errors="replace").strip()
-            log.error("Failed to read key from 1Password: %s", stderr)
+            log.error(
+                "Failed to read key %r (item=%s) from 1Password: %s",
+                wallet_name, op_item, stderr,
+            )
             sys.exit(1)
 
-        key = _decode_hex_to_bytes(bytearray(result.stdout or b""), "1Password")
+        key = _decode_hex_to_bytes(
+            bytearray(result.stdout or b""),
+            f"1Password item {op_item!r}",
+        )
 
-        # Best-effort: drop subprocess-side references early so GC can reclaim
-        # them; these are immutable bytes so this is no-op semantically.
         try:
             result.stdout = b""
             result.stderr = b""
         except Exception:
             pass
 
-        return key
+        return LoadedWallet(name=wallet_name, raw_key=key)
 
     def lock(self) -> None:
         try:
@@ -151,70 +245,96 @@ class OnePasswordKeyProvider:
 
 
 class EnvKeyProvider:
-    """Read raw hex from the ``PRIVATE_KEY_HEX`` env var.
+    """Read raw hex from env vars.
 
-    Note: the variable lives in the process environment for the entire
-    process lifetime — anything inside the process can read it via
-    ``os.environ``. This is the simplest backend; suitable for containers
-    where the orchestrator injects the secret and rotates it via redeploy.
-    """
+    Single-wallet legacy: ``PRIVATE_KEY_HEX``.
+    Multi-wallet: ``WALLET_<NAME>_PRIVATE_KEY_HEX`` for each name in WALLETS.
 
-    _ENV = "PRIVATE_KEY_HEX"
+    Env vars are deleted from ``os.environ`` after read (best-effort —
+    the str CPython internalised could still linger; see security.py)."""
 
-    def get_private_key(self) -> bytearray:
-        raw_str = os.environ.get(self._ENV, "")
+    _LEGACY_ENV = "PRIVATE_KEY_HEX"
+
+    def load_wallets(self) -> list[LoadedWallet]:
+        names = _wallet_names_from_config()
+        if not names:
+            return [self._fetch_one(DEFAULT_WALLET_NAME, self._LEGACY_ENV)]
+        out: list[LoadedWallet] = []
+        for n in names:
+            out.append(self._fetch_one(n, _env_var_for(n, "PRIVATE_KEY_HEX")))
+        return out
+
+    def _fetch_one(self, wallet_name: str, env_var: str) -> LoadedWallet:
+        raw_str = os.environ.get(env_var, "")
         if not raw_str:
-            log.error("KEY_PROVIDER=env requires %s to be set", self._ENV)
+            log.error(
+                "KEY_PROVIDER=env: %s is not set (wallet=%r)",
+                env_var, wallet_name,
+            )
             sys.exit(1)
-        # We have no way to wipe the str CPython internalised — best we can
-        # do is encode to bytes (mutable) and clear the env var ASAP.
         raw = bytearray(raw_str.encode("ascii"))
         try:
-            del os.environ[self._ENV]
+            del os.environ[env_var]
         except KeyError:
             pass
-        return _decode_hex_to_bytes(raw, "PRIVATE_KEY_HEX")
+        key = _decode_hex_to_bytes(raw, env_var)
+        return LoadedWallet(name=wallet_name, raw_key=key)
 
     def lock(self) -> None:
-        # No backend to lock; the env var is already deleted.
         return None
 
 
 class FileKeyProvider:
-    """Read raw hex from ``PRIVATE_KEY_FILE``.
+    """Read raw hex from chmod-600 file(s).
 
-    Refuses to load if the file is world- or group-readable (any mode bit
-    other than 0600 on the user). Hard requirement: a casual ``ls`` from
-    another user must not be able to dump the key.
-    """
+    Single-wallet legacy: ``PRIVATE_KEY_FILE``.
+    Multi-wallet: ``WALLET_<NAME>_PRIVATE_KEY_FILE`` for each name."""
 
-    def get_private_key(self) -> bytearray:
-        if not PRIVATE_KEY_FILE:
-            log.error("KEY_PROVIDER=file requires PRIVATE_KEY_FILE to be set")
-            sys.exit(1)
+    def load_wallets(self) -> list[LoadedWallet]:
+        names = _wallet_names_from_config()
+        if not names:
+            if not PRIVATE_KEY_FILE:
+                log.error("KEY_PROVIDER=file requires PRIVATE_KEY_FILE to be set")
+                sys.exit(1)
+            return [self._read_file(DEFAULT_WALLET_NAME, PRIVATE_KEY_FILE)]
+        out: list[LoadedWallet] = []
+        for n in names:
+            path = os.environ.get(_env_var_for(n, "PRIVATE_KEY_FILE"), "")
+            if not path:
+                log.error(
+                    "KEY_PROVIDER=file: %s is not set (wallet=%r)",
+                    _env_var_for(n, "PRIVATE_KEY_FILE"), n,
+                )
+                sys.exit(1)
+            out.append(self._read_file(n, path))
+        return out
+
+    def _read_file(self, wallet_name: str, path: str) -> LoadedWallet:
         try:
-            st = os.stat(PRIVATE_KEY_FILE)
+            st = os.stat(path)
         except FileNotFoundError:
-            log.error("PRIVATE_KEY_FILE not found: %s", PRIVATE_KEY_FILE)
+            log.error("PRIVATE_KEY_FILE not found: %s (wallet=%r)", path, wallet_name)
             sys.exit(1)
-        # Reject if group/other have any access bits set. We don't check
-        # ownership — the user running the service might legitimately read
-        # a file they don't own (uncommon but valid).
         if st.st_mode & 0o077:
             log.error(
                 "PRIVATE_KEY_FILE %s has unsafe mode %#o — set chmod 600 "
-                "(only the owner may read/write)",
-                PRIVATE_KEY_FILE, st.st_mode & 0o777,
+                "(only the owner may read/write) (wallet=%r)",
+                path, st.st_mode & 0o777, wallet_name,
             )
             sys.exit(1)
         try:
-            with open(PRIVATE_KEY_FILE, "rb") as fp:
+            with open(path, "rb") as fp:
                 raw = bytearray(fp.read())
         except OSError as exc:
-            log.error("Failed to read PRIVATE_KEY_FILE %s: %s",
-                      PRIVATE_KEY_FILE, exc)
+            log.error(
+                "Failed to read PRIVATE_KEY_FILE %s: %s (wallet=%r)",
+                path, exc, wallet_name,
+            )
             sys.exit(1)
-        return _decode_hex_to_bytes(raw, f"file {PRIVATE_KEY_FILE}")
+        return LoadedWallet(
+            name=wallet_name,
+            raw_key=_decode_hex_to_bytes(raw, f"file {path}"),
+        )
 
     def lock(self) -> None:
         return None
@@ -223,23 +343,39 @@ class FileKeyProvider:
 class KeychainKeyProvider:
     """Read raw hex from the macOS Keychain.
 
-    Uses ``security find-generic-password -s <service> -a <account> -w``,
-    which prints the plaintext to stdout. Requires the user to have stored
-    the key with::
+    Single-wallet legacy: ``KEYCHAIN_SERVICE`` + ``KEYCHAIN_ACCOUNT``.
+    Multi-wallet: same service for all, per-wallet ``WALLET_<NAME>_KEYCHAIN_ACCOUNT``.
 
-        security add-generic-password \\
-            -s payouts -a treasury -w '<hex-private-key>' -U
+    Stored with::
+
+        security add-generic-password -s payouts -a <ACCOUNT> -w '<hex>' -U
     """
 
-    def get_private_key(self) -> bytearray:
+    def load_wallets(self) -> list[LoadedWallet]:
         if sys.platform != "darwin":
             log.error("KEY_PROVIDER=keychain only works on macOS")
             sys.exit(1)
+        names = _wallet_names_from_config()
+        if not names:
+            return [self._read_one(DEFAULT_WALLET_NAME, KEYCHAIN_ACCOUNT)]
+        out: list[LoadedWallet] = []
+        for n in names:
+            account = os.environ.get(_env_var_for(n, "KEYCHAIN_ACCOUNT"), "")
+            if not account:
+                log.error(
+                    "KEY_PROVIDER=keychain: %s is not set (wallet=%r)",
+                    _env_var_for(n, "KEYCHAIN_ACCOUNT"), n,
+                )
+                sys.exit(1)
+            out.append(self._read_one(n, account))
+        return out
+
+    def _read_one(self, wallet_name: str, account: str) -> LoadedWallet:
         try:
             result = subprocess.run(
                 ["security", "find-generic-password",
                  "-s", KEYCHAIN_SERVICE,
-                 "-a", KEYCHAIN_ACCOUNT,
+                 "-a", account,
                  "-w"],
                 capture_output=True,
                 text=False,
@@ -248,19 +384,100 @@ class KeychainKeyProvider:
         except FileNotFoundError:
             log.error("macOS 'security' tool not found — cannot use keychain provider")
             sys.exit(1)
-
         if result.returncode != 0:
             stderr = (result.stderr or b"").decode("utf-8", errors="replace").strip()
             log.error(
-                "Keychain lookup failed (service=%s account=%s): %s",
-                KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT, stderr,
+                "Keychain lookup failed (wallet=%r service=%s account=%s): %s",
+                wallet_name, KEYCHAIN_SERVICE, account, stderr,
+            )
+            sys.exit(1)
+        return LoadedWallet(
+            name=wallet_name,
+            raw_key=_decode_hex_to_bytes(
+                bytearray(result.stdout or b""),
+                f"keychain {KEYCHAIN_SERVICE}/{account}",
+            ),
+        )
+
+    def lock(self) -> None:
+        return None
+
+
+class EncryptedFileKeyProvider:
+    """Read keys from a single encrypted JSON keystore.
+
+    Multi-wallet by construction: the keystore file is a JSON array of
+    AES-256-GCM blobs sharing one scrypt-derived key. ``WALLETS`` is
+    ignored — the file is the source of truth.
+
+    Passphrase resolution (priority order, see encrypted_keystore.resolve_passphrase):
+
+      1. ``KEY_PASSPHRASE`` env var (consumed and deleted after use).
+      2. ``KEY_PASSPHRASE_FILE`` chmod-600 file.
+      3. Interactive ``getpass`` prompt — only if stdin is a TTY.
+
+    Containers should set ``KEY_PASSPHRASE`` via Docker secrets / k8s
+    Secret env. Plain VPS deploys can use ``KEY_PASSPHRASE_FILE`` so the
+    passphrase isn't visible in ``ps``."""
+
+    def load_wallets(self) -> list[LoadedWallet]:
+        # Lazy import: only this provider needs cryptography.
+        from skr_crypto.server.encrypted_keystore import (
+            KeystoreError,
+            KeystoreNotFound,
+            WrongPassphrase,
+            load_keystore,
+            resolve_passphrase,
+        )
+
+        if not KEYSTORE_FILE:
+            log.error("KEY_PROVIDER=encrypted_file requires KEYSTORE_FILE to be set")
+            sys.exit(1)
+
+        passphrase_env = os.environ.get("KEY_PASSPHRASE", "")
+        try:
+            passphrase = resolve_passphrase(
+                env_var_value=passphrase_env or None,
+                file_path=KEY_PASSPHRASE_FILE or None,
+                allow_tty_prompt=True,
+            )
+        except Exception as exc:
+            log.error("Failed to resolve keystore passphrase: %s", exc)
+            sys.exit(1)
+
+        # Drop the env var ASAP. The decoded bytes still live in
+        # ``passphrase`` (mutable bytes), but at least the environment
+        # is clean for any subprocesses we spawn.
+        if passphrase_env:
+            try:
+                del os.environ["KEY_PASSPHRASE"]
+            except KeyError:
+                pass
+
+        try:
+            entries = load_keystore(KEYSTORE_FILE, passphrase)
+        except KeystoreNotFound:
+            log.error("Keystore file not found: %s", KEYSTORE_FILE)
+            sys.exit(1)
+        except WrongPassphrase:
+            log.error("Keystore passphrase rejected — check KEY_PASSPHRASE")
+            sys.exit(1)
+        except KeystoreError as exc:
+            log.error("Keystore load failed: %s", exc)
+            sys.exit(1)
+
+        if not entries:
+            log.error(
+                "Keystore %s contains zero wallets — add one with "
+                "`skr-crypto wallet add` before starting the server",
+                KEYSTORE_FILE,
             )
             sys.exit(1)
 
-        return _decode_hex_to_bytes(
-            bytearray(result.stdout or b""),
-            f"keychain {KEYCHAIN_SERVICE}/{KEYCHAIN_ACCOUNT}",
-        )
+        return [
+            LoadedWallet(name=e.name, raw_key=e.raw_key, address=e.address)
+            for e in entries
+        ]
 
     def lock(self) -> None:
         return None
@@ -276,15 +493,11 @@ _REGISTRY: dict[str, type[KeyProvider]] = {
     "env": EnvKeyProvider,
     "file": FileKeyProvider,
     "keychain": KeychainKeyProvider,
+    "encrypted_file": EncryptedFileKeyProvider,
 }
 
 
 def get_key_provider() -> KeyProvider:
-    """Return the configured KeyProvider instance.
-
-    Selection is based on the ``KEY_PROVIDER`` config value (already
-    validated at startup; see ``app.config.validate_config``).
-    """
     cls = _REGISTRY.get(KEY_PROVIDER)
     if cls is None:
         log.error(

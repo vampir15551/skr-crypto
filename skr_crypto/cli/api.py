@@ -115,9 +115,21 @@ class APIClient:
     def health(self) -> dict[str, Any]:
         return self._get("/api/v1/health")
 
-    def balance(self) -> dict[str, Any]:
+    def balance(self, wallet: str | None = None) -> dict[str, Any]:
         # Balance hits TronGrid through the service — generous timeout.
-        return self._get("/api/v1/balance", timeout=30.0)
+        # When ``wallet`` is None the service auto-picks (single-wallet
+        # deployments get the only wallet; multi-wallet picks max USDT).
+        path = "/api/v1/balance"
+        if wallet:
+            from urllib.parse import quote
+            path += f"?wallet={quote(wallet)}"
+        return self._get(path, timeout=30.0)
+
+    def wallets(self) -> dict[str, Any]:
+        """List every configured wallet with live balances + the
+        auto-pick winner. One server-side TronGrid call per wallet,
+        so the timeout scales linearly — give it 60s for safety."""
+        return self._get("/api/v1/wallets", timeout=60.0)
 
     def risk(self, address: str, *, external: bool = False) -> dict[str, Any]:
         """Look up the wallet-risk report for ``address``.

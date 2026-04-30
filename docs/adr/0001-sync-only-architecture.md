@@ -106,5 +106,5 @@ ever "it depends", the code is unsafe.
 
 ## Related
 
-- [`GUIDELINES.md` § Sync everywhere on the money path](../../GUIDELINES.md)
-- [`ARCHITECTURE.md` § Process model](../../ARCHITECTURE.md#process-model)
+- [`GUIDELINES.md` § Sync everywhere on the money path](../architecture.md)
+- [`ARCHITECTURE.md` § Process model](../architecture.md)

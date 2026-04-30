@@ -115,6 +115,6 @@ parsing surface for bugs to live in.
 
 ## Related
 
-- [`ARCHITECTURE.md` § Data flow with trust boundaries](../../ARCHITECTURE.md#data-flow-with-trust-boundaries)
-- [`SECURITY.md` § Operator responsibilities](../../SECURITY.md#operator-responsibilities)
+- [`ARCHITECTURE.md` § Data flow with trust boundaries](../architecture.md)
+- [`SECURITY.md` § Operator responsibilities](../security.md)
 - `skr_crypto/server/key_providers.py`

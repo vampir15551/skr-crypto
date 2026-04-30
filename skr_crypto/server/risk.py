@@ -313,7 +313,7 @@ def _check_usdt_blacklist(tron, address: str) -> RiskCheck:
     failures that operators have hit IRL.
     """
     try:
-        contract = tron._get_usdt_contract()
+        contract = tron.get_usdt_contract()
         is_blacklisted = contract.functions.isBlackListed(address)
     except Exception as exc:
         return RiskCheck(

@@ -17,6 +17,15 @@ class SendRequest(BaseModel):
         min_length=1,
         max_length=128,
     )
+    # Optional: explicit source wallet name (must match one configured at
+    # startup). When omitted, the service auto-picks the wallet with the
+    # largest USDT balance — see WalletPool.resolve. Single-wallet
+    # deployments can ignore this field entirely.
+    wallet: str | None = Field(
+        default=None,
+        description="Source wallet name. Omit for auto-pick by max USDT balance.",
+        max_length=64,
+    )
 
     @field_validator("amount")
     @classmethod
@@ -29,6 +38,9 @@ class SendRequest(BaseModel):
 class SendResponse(BaseModel):
     txid: str
     from_address: str
+    # Echo back the wallet name that actually signed — operators correlating
+    # logs across multi-wallet deploys want this.
+    wallet: str
     to_address: str
     amount: str
     idempotency_key: str
@@ -36,6 +48,10 @@ class SendResponse(BaseModel):
 
 
 class BalanceResponse(BaseModel):
+    # Wallet name + address are both included so single-wallet legacy
+    # consumers see what they expect, and multi-wallet consumers can
+    # disambiguate.
+    wallet: str
     address: str
     trx: str
     usdt: str
@@ -45,6 +61,25 @@ class BalanceResponse(BaseModel):
     bandwidth_free_available: int = 0
     bandwidth_paid_available: int = 0
     tron_power_staked: int = 0
+
+
+class WalletSummary(BaseModel):
+    """One row in the /wallets listing."""
+    wallet: str
+    address: str
+    trx: str
+    usdt: str
+    energy_available: int = 0
+    bandwidth_free_available: int = 0
+    bandwidth_paid_available: int = 0
+
+
+class WalletListResponse(BaseModel):
+    """All wallets configured for this process. The ``auto_pick`` field
+    points at the wallet that would handle a /send with no explicit
+    ``wallet`` parameter right now (i.e. max USDT balance)."""
+    wallets: list[WalletSummary]
+    auto_pick: str | None = None
 
 
 class HealthLiveResponse(BaseModel):
@@ -58,19 +93,18 @@ class HealthLiveResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Full readiness probe — requires auth, hits TronGrid."""
+    """Full readiness probe — requires auth, hits TronGrid.
+
+    For multi-wallet deployments this returns an aggregate (no balances)
+    plus a wallet count; per-wallet detail lives at /balance and /wallets.
+    """
     status: str = "ok"
-    address: str
     network: str
     uptime_seconds: int
     shutdown_in_seconds: int
     node_connected: bool
-    # Same resource snapshot as /balance, so liveness dashboards don't need
-    # two calls.
-    energy_available: int = 0
-    bandwidth_free_available: int = 0
-    bandwidth_paid_available: int = 0
-    tron_power_staked: int = 0
+    wallet_count: int = 0
+    wallet_names: list[str] = []
 
 
 class VersionResponse(BaseModel):

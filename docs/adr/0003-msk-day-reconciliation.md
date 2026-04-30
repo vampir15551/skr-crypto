@@ -118,6 +118,6 @@ hardcoded constant is the right amount of code.
 
 ## Related
 
-- [`OPERATIONS.md` § Startup self-check](../../OPERATIONS.md)
-- [`runbooks/audit-recovery.md`](../../runbooks/audit-recovery.md)
+- [`OPERATIONS.md` § Startup self-check](../monitoring.md)
+- [`runbooks/audit-recovery.md`](../audit-log.md)
 - `skr_crypto/server/startup_check.py`

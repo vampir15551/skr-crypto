@@ -12,25 +12,40 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 # Key provider
 # ---------------------------------------------------------------------------
-# Selects the backend for loading the TRON treasury private key. See
-# app/key_providers.py for backend semantics. Valid values:
-#   - 1password : 1Password CLI (`op`); default for operator-on-laptop
-#   - env       : raw hex in PRIVATE_KEY_HEX env var; for containers
-#   - file      : raw hex in a chmod-600 file at PRIVATE_KEY_FILE
-#   - keychain  : macOS Keychain (KEYCHAIN_SERVICE/KEYCHAIN_ACCOUNT)
+# Selects the backend for loading TRON treasury private keys. See
+# server/key_providers.py for backend semantics. Valid values:
+#   - 1password      : 1Password CLI (`op`); default for operator-on-laptop
+#   - env            : raw hex in PRIVATE_KEY_HEX env var; for containers
+#   - file           : raw hex in a chmod-600 file at PRIVATE_KEY_FILE
+#   - keychain       : macOS Keychain (KEYCHAIN_SERVICE/KEYCHAIN_ACCOUNT)
+#   - encrypted_file : AES-256-GCM keystore (multi-wallet, container-safe)
 KEY_PROVIDER: str = os.getenv("KEY_PROVIDER", "1password").strip().lower()
 
-# 1Password backend
+# Multi-wallet listing. Empty/unset means "single wallet, use legacy globals
+# below". When set to a comma-separated list ("main,reserve") each provider
+# expects per-wallet env vars; see server/key_providers.py.
+WALLETS: str = os.getenv("WALLETS", "")
+
+# 1Password backend (single wallet — multi-wallet uses WALLET_<NAME>_OP_ITEM)
 OP_VAULT: str = os.getenv("OP_VAULT", "Treasury")
 OP_ITEM: str = os.getenv("OP_ITEM", "TRON-Treasury-TXpdZ6qv")
 OP_FIELD: str = os.getenv("OP_FIELD", "password")
 
-# File backend
+# File backend (single wallet — multi-wallet uses WALLET_<NAME>_PRIVATE_KEY_FILE)
 PRIVATE_KEY_FILE: str = os.getenv("PRIVATE_KEY_FILE", "")
 
-# macOS Keychain backend
+# macOS Keychain backend (single wallet — multi-wallet uses WALLET_<NAME>_KEYCHAIN_ACCOUNT)
 KEYCHAIN_SERVICE: str = os.getenv("KEYCHAIN_SERVICE", "payouts")
 KEYCHAIN_ACCOUNT: str = os.getenv("KEYCHAIN_ACCOUNT", "treasury")
+
+# Encrypted file backend.
+# KEYSTORE_FILE: path to the AES-256-GCM JSON keystore.
+# KEY_PASSPHRASE: env var with the unlock passphrase. Consumed and removed
+#   from os.environ after first use.
+# KEY_PASSPHRASE_FILE: alternative — chmod-600 file containing the passphrase.
+#   Used when you don't want the passphrase visible in `ps` / docker inspect.
+KEYSTORE_FILE: str = os.getenv("KEYSTORE_FILE", "")
+KEY_PASSPHRASE_FILE: str = os.getenv("KEY_PASSPHRASE_FILE", "")
 
 # ---------------------------------------------------------------------------
 # Auth
@@ -221,14 +236,24 @@ def validate_config() -> None:
     if not AUTH_TOKEN:
         errors.append("AUTH_TOKEN is not set")
 
-    if KEY_PROVIDER not in ("1password", "env", "file", "keychain"):
+    if KEY_PROVIDER not in (
+        "1password", "env", "file", "keychain", "encrypted_file",
+    ):
         errors.append(
-            f"KEY_PROVIDER must be one of 1password/env/file/keychain, "
-            f"got: {KEY_PROVIDER}"
+            f"KEY_PROVIDER must be one of 1password/env/file/keychain/"
+            f"encrypted_file, got: {KEY_PROVIDER}"
         )
 
-    if KEY_PROVIDER == "file" and not PRIVATE_KEY_FILE:
-        errors.append("KEY_PROVIDER=file requires PRIVATE_KEY_FILE")
+    # File backend: single-wallet legacy needs PRIVATE_KEY_FILE; multi-wallet
+    # path validates WALLET_<NAME>_PRIVATE_KEY_FILE inside the provider.
+    if KEY_PROVIDER == "file" and not WALLETS and not PRIVATE_KEY_FILE:
+        errors.append("KEY_PROVIDER=file requires PRIVATE_KEY_FILE (or WALLETS=...)")
+
+    # Encrypted file backend always needs a path; passphrase resolution is
+    # handled at load time (env / file / TTY prompt) so validation here only
+    # checks the file location.
+    if KEY_PROVIDER == "encrypted_file" and not KEYSTORE_FILE:
+        errors.append("KEY_PROVIDER=encrypted_file requires KEYSTORE_FILE")
 
     if RISK_BLOCK_LEVEL not in ("high", "medium", "none"):
         errors.append(

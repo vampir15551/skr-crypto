@@ -1,3 +1,22 @@
+"""Keyless TRON RPC layer.
+
+Holds the TronGrid HTTP client + cached chain artefacts (USDT contract
+handle, energy price). Does NOT hold any private key — signing lives
+in :class:`skr_crypto.server.wallet.Wallet`. This split lets the
+service host multiple wallets behind a single connection pool.
+
+Migrating from the old single-wallet shape:
+
+  - Old: ``tron.address``, ``tron.priv_key``, ``tron.get_trx_balance()``,
+    ``tron.send_usdt(to, amount, fee_limit)``.
+  - New: address-parameterised reads
+    (``get_trx_balance_for(addr)`` / ``get_usdt_balance_for(addr)`` /
+    ``get_account_resource_for(addr)``) + signing on the wallet
+    (``wallet.send_usdt(client, contract, to, amount, fee_limit)``).
+
+Backward-compat shims are intentionally absent — the multi-wallet
+refactor is a hard cut, version bumped accordingly.
+"""
 from __future__ import annotations
 
 import logging
@@ -8,7 +27,6 @@ from decimal import Decimal
 
 from tronpy import Tron
 from tronpy.abi import trx_abi
-from tronpy.keys import PrivateKey
 from tronpy.providers import HTTPProvider
 
 from skr_crypto.server.config import (
@@ -21,7 +39,6 @@ from skr_crypto.server.config import (
     USDT_DECIMALS,
     USDT_FEE_LIMIT_SUN,
 )
-from skr_crypto.server.security import load_private_key, wipe_bytearray
 
 # Min fee_limit floor (in SUN). Even if the estimate says ~6 TRX, we never go
 # below this — node sometimes spikes energy on contract state changes.
@@ -76,12 +93,12 @@ def _with_retry(fn, description: str):
 
 
 class TronClient:
-    """Manages TRON connection and transaction signing."""
+    """Keyless TRON RPC client. One per process; safe to call from
+    multiple threads (tronpy itself is sync + uses requests under the hood,
+    but our caches are threadsafe via the locks below)."""
 
     def __init__(self) -> None:
         self.client: Tron | None = None
-        self.priv_key: PrivateKey | None = None
-        self.address: str = ""
         self._usdt_contract = None
         self._contract_lock = threading.Lock()
         # Cached chain energy price (sun per energy unit). Refreshed lazily
@@ -95,15 +112,13 @@ class TronClient:
     # -- lifecycle -----------------------------------------------------------
 
     def init(self) -> None:
-        raw_key = load_private_key()
-
         endpoint = _ENDPOINTS.get(TRON_NETWORK)
         if not endpoint:
             log.error("Unknown TRON_NETWORK: %s", TRON_NETWORK)
             sys.exit(1)
 
-        # Use API key if provided (avoids 429 rate limits).
-        # Always pass an explicit timeout so a stuck node can't hang request handlers.
+        # Use API key if provided (avoids 429 rate limits). Always pass an
+        # explicit timeout so a stuck node can't hang request handlers.
         if TRONGRID_API_KEY:
             provider = HTTPProvider(endpoint, api_key=TRONGRID_API_KEY, timeout=TRON_HTTP_TIMEOUT)
             log.info("Using TronGrid API key (http timeout=%ss)", TRON_HTTP_TIMEOUT)
@@ -113,25 +128,20 @@ class TronClient:
                         TRON_HTTP_TIMEOUT)
 
         self.client = Tron(provider=provider)
-        self.priv_key = PrivateKey(bytes(raw_key))
-        self.address = self.priv_key.public_key.to_base58check_address()
-
-        wipe_bytearray(raw_key)
-
-        log.info("Wallet loaded: %s (network: %s)", self.address, TRON_NETWORK)
+        log.info("TronClient initialised (network: %s)", TRON_NETWORK)
 
     def destroy(self) -> None:
-        self.priv_key = None
-        self.address = ""
+        self.client = None
         self._usdt_contract = None
 
     # -- contract cache ------------------------------------------------------
 
-    def _get_usdt_contract(self):
+    def get_usdt_contract(self):
         """Cache the USDT contract object to avoid repeated getcontract calls.
 
-        Thread-safe: double-checked locking ensures only one RPC call even
-        if multiple requests race on first init.
+        Public so ``Wallet.send_usdt`` can grab the same handle. Thread-safe:
+        double-checked locking ensures only one RPC call even if multiple
+        requests race on first init.
         """
         if self._usdt_contract is not None:
             return self._usdt_contract
@@ -143,18 +153,31 @@ class TronClient:
                 )
             return self._usdt_contract
 
-    # -- queries -------------------------------------------------------------
+    # -- queries (address-parameterised) -------------------------------------
 
-    def get_trx_balance(self) -> Decimal:
-        return _with_retry(
-            lambda: self.client.get_account_balance(self.address),
-            "get_trx_balance",
-        )
+    def get_trx_balance_for(self, address: str) -> Decimal:
+        """TRX balance of an arbitrary address. Used by /balance and the
+        auto-pick path in WalletPool.
 
-    def get_usdt_balance(self) -> Decimal:
-        contract = self._get_usdt_contract()
+        Returns Decimal("0") if the account has never been activated —
+        TronGrid returns "AccountNotFound" for those, which is not an
+        error condition for our purposes (the address simply has no
+        balance yet)."""
+        try:
+            return _with_retry(
+                lambda: self.client.get_account_balance(address),
+                "get_trx_balance",
+            )
+        except Exception as exc:
+            cls = type(exc).__name__.lower()
+            if "not found" in str(exc).lower() or "addressnotfound" in cls:
+                return Decimal(0)
+            raise
+
+    def get_usdt_balance_for(self, address: str) -> Decimal:
+        contract = self.get_usdt_contract()
         raw = _with_retry(
-            lambda: contract.functions.balanceOf(self.address),
+            lambda: contract.functions.balanceOf(address),
             "get_usdt_balance",
         )
         return Decimal(raw) / Decimal(10 ** USDT_DECIMALS)
@@ -171,8 +194,8 @@ class TronClient:
 
     # -- account resources (energy / bandwidth) -----------------------------
 
-    def get_account_resource(self) -> dict:
-        """Return raw account resource dict from the chain.
+    def get_account_resource_for(self, address: str) -> dict:
+        """Return raw account resource dict for an address.
 
         Important fields (mainnet):
           EnergyLimit / EnergyUsed         — staked-derived energy quota
@@ -181,16 +204,16 @@ class TronClient:
           tronPowerLimit                   — total staked TRX (in TRX, not sun)
         """
         return _with_retry(
-            lambda: self.client.get_account_resource(self.address),
+            lambda: self.client.get_account_resource(address),
             "get_account_resource",
         )
 
-    def get_resource_summary(self) -> dict:
+    def get_resource_summary_for(self, address: str) -> dict:
         """Operator-friendly summary of energy + bandwidth + stakes."""
         try:
-            r = self.get_account_resource()
+            r = self.get_account_resource_for(address)
         except Exception as exc:
-            log.warning("get_account_resource failed: %s", exc)
+            log.warning("get_account_resource(%s) failed: %s", address, exc)
             return {
                 "energy_available": 0,
                 "energy_limit": 0,
@@ -229,7 +252,6 @@ class TronClient:
         if cached is not None and (now - self._energy_price_fetched_at) < _ENERGY_PRICE_TTL_SEC:
             return cached
         with self._energy_price_lock:
-            # Re-check under lock — another thread may have just refreshed.
             now = time.time()
             cached = self._energy_price_sun
             if cached is not None and (now - self._energy_price_fetched_at) < _ENERGY_PRICE_TTL_SEC:
@@ -239,7 +261,6 @@ class TronClient:
                     self.client.get_chain_parameters,
                     "get_chain_parameters",
                 )
-                # Chain param key 11 = "getEnergyFee" (SUN per energy unit).
                 price = TRON_ENERGY_PRICE_SUN_FALLBACK
                 for entry in params:
                     if entry.get("key") in ("getEnergyFee", "EnergyFee"):
@@ -252,9 +273,6 @@ class TronClient:
                 log.info("Chain energy price: %s sun/energy (cached %.0fs)",
                          price, _ENERGY_PRICE_TTL_SEC)
             except Exception as exc:
-                # Keep the previous value if we have one — a stale real
-                # reading beats the configured fallback. Only fall through
-                # to the fallback on the very first fetch.
                 if self._energy_price_sun is None:
                     log.warning(
                         "Failed to fetch chain energy price (%s): %s — using fallback %s",
@@ -267,22 +285,20 @@ class TronClient:
                         "Failed to refresh chain energy price (%s): %s — keeping cached %s",
                         type(exc).__name__, exc, self._energy_price_sun,
                     )
-                    # Bump fetched_at to avoid retry-storm on repeated failures.
                     self._energy_price_fetched_at = now
             return self._energy_price_sun
 
     # -- pre-flight energy estimate -----------------------------------------
 
-    def estimate_transfer_energy(self, to_address: str, amount: Decimal) -> int | None:
-        """Estimate energy required for a USDT transfer to `to_address`.
+    def estimate_transfer_energy(
+        self, from_address: str, to_address: str, amount: Decimal,
+    ) -> int | None:
+        """Estimate energy required for a USDT transfer between two addresses.
 
-        Returns:
-            estimated energy units (int), or None if the node refuses to
-            estimate (some endpoints disable this for cost reasons).
-
-        Uses get_estimated_energy under the hood, which calls
-        triggerconstantcontract — does not consume real energy.
-        """
+        Address-parameterised so the auto-pick path can estimate from the
+        chosen wallet, not a fixed singleton. Returns ``int`` or ``None`` if
+        the node refuses to estimate (some endpoints disable this for cost
+        reasons)."""
         amount_raw = int(amount * Decimal(10 ** USDT_DECIMALS))
         try:
             param = trx_abi.encode_single(
@@ -295,7 +311,7 @@ class TronClient:
         try:
             estimate = _with_retry(
                 lambda: self.client.get_estimated_energy(
-                    owner_address=self.address,
+                    owner_address=from_address,
                     contract_address=USDT_CONTRACT,
                     function_selector="transfer(address,uint256)",
                     parameter=param,
@@ -322,12 +338,10 @@ class TronClient:
 
         Bounded by [_MIN_FEE_LIMIT_SUN, USDT_FEE_LIMIT_SUN]. If no estimate
         is available, returns the configured ceiling — the node will refund
-        any unused portion, so this is safe (we just lose tx-failure capping).
-        """
+        any unused portion, so this is safe (we just lose tx-failure capping)."""
         if not estimated_energy:
             return USDT_FEE_LIMIT_SUN
         price = self.energy_price_sun()
-        # Decimal math because FEE_LIMIT_SAFETY_MULT is Decimal.
         sun = int(Decimal(estimated_energy) * Decimal(price) * FEE_LIMIT_SAFETY_MULT)
         return max(_MIN_FEE_LIMIT_SUN, min(USDT_FEE_LIMIT_SUN, sun))
 
@@ -341,12 +355,8 @@ class TronClient:
         can't kill an otherwise valid payout.
 
         Cold recipients (usdt_balance == 0) cost ~18k extra energy because
-        the USDT contract initializes a fresh storage slot on first credit.
-        Logging this lets post-mortem diagnostics correlate fee_limit
-        choices with on-chain reality — the typical "warm = ~13k energy,
-        cold = ~32k energy" split.
-        """
-        contract = self._get_usdt_contract()
+        the USDT contract initializes a fresh storage slot on first credit."""
+        contract = self.get_usdt_contract()
 
         exists = True
         trx = Decimal(0)
@@ -374,62 +384,6 @@ class TronClient:
 
         return {"exists": exists, "trx_balance": trx, "usdt_balance": usdt}
 
-    # -- transfer ------------------------------------------------------------
 
-    def send_usdt(
-        self,
-        to_address: str,
-        amount: Decimal,
-        fee_limit_sun: int | None = None,
-    ) -> str:
-        contract = self._get_usdt_contract()
-        amount_raw = int(amount * Decimal(10 ** USDT_DECIMALS))
-
-        # fee_limit is a CAP on burn — actual cost is energy_used * price.
-        # Lower cap = bounded loss if estimate is wrong. Higher cap = tx
-        # survives unexpected energy spikes. We pick min(estimate*1.3, ceiling).
-        if fee_limit_sun is None:
-            fee_limit_sun = USDT_FEE_LIMIT_SUN
-        fee_limit_sun = max(_MIN_FEE_LIMIT_SUN, min(USDT_FEE_LIMIT_SUN, fee_limit_sun))
-
-        txn = (
-            contract.functions.transfer(to_address, amount_raw)
-            .with_owner(self.address)
-            .fee_limit(fee_limit_sun)
-            .build()
-            .sign(self.priv_key)
-        )
-        # NO retry on broadcast — duplicate tx = double spend
-        result = txn.broadcast()
-
-        # Always log the raw response so post-mortem diagnostics can see exactly
-        # what the node returned — including any extra fields beyond
-        # result/code/message/txid (e.g. SIGERROR with a partial txid).
-        log.info("Broadcast response: %r", result)
-
-        # tronpy returns the raw node response. Success: {"result": True, "txid": "..."}.
-        # Failure: {"code": "BANDWIDTH_ERROR" / "SIGERROR" / ..., "message": "<hex>", ...}.
-        # We must reject anything that isn't an unambiguous success — otherwise an empty
-        # txid would be cached as "the txid" and all retries would falsely return
-        # status=duplicate with no real on-chain transaction.
-        if not isinstance(result, dict):
-            raise RuntimeError(f"unexpected broadcast response type: {type(result).__name__}")
-
-        if result.get("result") is not True:
-            code = result.get("code") or "UNKNOWN"
-            message = result.get("message") or ""
-            raise RuntimeError(f"broadcast rejected: code={code} message={message!r}")
-
-        txid = result.get("txid") or ""
-        if not txid:
-            raise RuntimeError(f"broadcast returned empty txid: {result!r}")
-
-        log.info(
-            "TX sent: %s -> %s  amount=%s USDT  txid=%s  fee_limit=%s sun",
-            self.address, to_address, amount, txid, fee_limit_sun,
-        )
-        return txid
-
-
-# Singleton
+# Singleton — one HTTP client pool process-wide
 tron = TronClient()

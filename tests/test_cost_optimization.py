@@ -113,7 +113,7 @@ class TestResourceVisibility:
     staking state so they can see when they're about to start burning TRX."""
 
     def test_balance_includes_resources(self, client, auth_headers, mock_tron):
-        mock_tron.get_resource_summary = MagicMock(return_value={
+        mock_tron.get_resource_summary_for = MagicMock(return_value={
             "energy_available": 50_000,
             "energy_limit": 100_000,
             "bandwidth_free_available": 600,
@@ -128,34 +128,40 @@ class TestResourceVisibility:
         assert data["bandwidth_paid_available"] == 2000
         assert data["tron_power_staked"] == 15000
 
-    def test_health_includes_resources_when_connected(self, client, auth_headers, mock_tron):
+    def test_health_reports_node_and_wallet_count(self, client, auth_headers, mock_tron):
+        """1.4.0: /health no longer returns per-wallet resources (which
+        wallet would they belong to in a multi-wallet pool?). Use
+        /balance or /wallets for live resource detail; /health stays
+        cheap (one RPC for node connectivity + already-loaded pool
+        introspection)."""
         mock_tron.check_connection = MagicMock(return_value=True)
-        mock_tron.get_resource_summary = MagicMock(return_value={
-            "energy_available": 7500,
-            "energy_limit": 10000,
-            "bandwidth_free_available": 300,
-            "bandwidth_paid_available": 0,
-            "tron_power": 1000,
-        })
+        # If /health called get_resource_summary_for, the side_effect
+        # below would assert. It must not.
+        mock_tron.get_resource_summary_for = MagicMock(
+            side_effect=Exception("/health must not query resources"),
+        )
         resp = client.get("/api/v1/health", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert data["node_connected"] is True
-        assert data["energy_available"] == 7500
-        assert data["tron_power_staked"] == 1000
+        assert data["wallet_count"] == 1
+        assert data["wallet_names"] == ["default"]
 
-    def test_health_skips_resource_call_when_disconnected(
+    def test_health_when_node_down_still_lists_wallets(
         self, client, auth_headers, mock_tron,
     ):
-        """No point querying resources when the node is unreachable."""
+        """No point querying TronGrid resources when the node is
+        unreachable, but the wallet pool is in-process state we always
+        have available."""
         mock_tron.check_connection = MagicMock(return_value=False)
-        mock_tron.get_resource_summary = MagicMock(side_effect=Exception("must not call"))
+        mock_tron.get_resource_summary_for = MagicMock(
+            side_effect=Exception("/health must not query resources"),
+        )
         resp = client.get("/api/v1/health", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert data["node_connected"] is False
-        assert data["energy_available"] == 0
-        assert mock_tron.get_resource_summary.call_count == 0
+        assert data["wallet_count"] == 1
 
 
 class TestHealthLive:
@@ -170,7 +176,7 @@ class TestHealthLive:
 
     def test_live_does_not_call_tron(self, client, mock_tron):
         mock_tron.check_connection = MagicMock(side_effect=Exception("must not call"))
-        mock_tron.get_resource_summary = MagicMock(side_effect=Exception("must not call"))
+        mock_tron.get_resource_summary_for = MagicMock(side_effect=Exception("must not call"))
         resp = client.get("/api/v1/health/live")
         assert resp.status_code == 200
 
@@ -195,7 +201,7 @@ class TestEstimateTransferEnergy:
         c.address = mock_tron.address
         c.client.get_estimated_energy = MagicMock(return_value=13500)
 
-        energy = c.estimate_transfer_energy(VALID_ADDRESS, Decimal("1.5"))
+        energy = c.estimate_transfer_energy(c.address, VALID_ADDRESS, Decimal("1.5"))
         assert energy == 13500
 
     def test_zero_returned_is_treated_as_unavailable(self, mock_tron):
@@ -204,7 +210,7 @@ class TestEstimateTransferEnergy:
         c.client = mock_tron.client
         c.address = mock_tron.address
         c.client.get_estimated_energy = MagicMock(return_value=0)
-        assert c.estimate_transfer_energy(VALID_ADDRESS, Decimal("1")) is None
+        assert c.estimate_transfer_energy(c.address, VALID_ADDRESS, Decimal("1")) is None
 
     def test_exception_is_swallowed(self, mock_tron):
         from skr_crypto.server.tron_client import TronClient
@@ -213,4 +219,4 @@ class TestEstimateTransferEnergy:
         c.address = mock_tron.address
         c.client.get_estimated_energy = MagicMock(side_effect=Exception("no estimate"))
         # Must not propagate — estimate is advisory, we fall back to the cap.
-        assert c.estimate_transfer_energy(VALID_ADDRESS, Decimal("1")) is None
+        assert c.estimate_transfer_energy(c.address, VALID_ADDRESS, Decimal("1")) is None

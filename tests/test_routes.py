@@ -45,13 +45,13 @@ class TestSendEndpoint:
         assert resp.status_code == 401
 
     def test_send_insufficient_usdt(self, client, auth_headers, mock_tron):
-        mock_tron.get_usdt_balance = MagicMock(return_value=Decimal("10"))
+        mock_tron.get_usdt_balance_for = MagicMock(return_value=Decimal("10"))
         resp = self._send(client, auth_headers, amount="1000")
         assert resp.status_code == 400
         assert "INSUFFICIENT_BALANCE" in resp.json()["code"]
 
     def test_send_low_trx(self, client, auth_headers, mock_tron):
-        mock_tron.get_trx_balance = MagicMock(return_value=Decimal("1"))
+        mock_tron.get_trx_balance_for = MagicMock(return_value=Decimal("1"))
         resp = self._send(client, auth_headers)
         assert resp.status_code == 400
         assert "INSUFFICIENT_BALANCE" in resp.json()["code"]

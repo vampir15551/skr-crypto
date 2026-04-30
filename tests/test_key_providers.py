@@ -83,7 +83,7 @@ class TestEnvKeyProvider:
         monkeypatch.setenv("PRIVATE_KEY_HEX", TEST_HEX)
         kp = _import_kp()
         provider = kp.EnvKeyProvider()
-        key = provider.get_private_key()
+        key = provider.load_wallets()[0].raw_key
         assert bytes(key) == TEST_BYTES
         # Env var must be deleted after read so a child process can't inherit it.
         assert "PRIVATE_KEY_HEX" not in os.environ
@@ -92,7 +92,7 @@ class TestEnvKeyProvider:
         monkeypatch.delenv("PRIVATE_KEY_HEX", raising=False)
         kp = _import_kp()
         with pytest.raises(SystemExit):
-            kp.EnvKeyProvider().get_private_key()
+            kp.EnvKeyProvider().load_wallets()
 
     def test_lock_is_noop(self, monkeypatch):
         kp = _import_kp()
@@ -113,7 +113,7 @@ class TestFileKeyProvider:
         monkeypatch.setenv("PRIVATE_KEY_FILE", str(key_file))
         kp = _import_kp()
         provider = kp.FileKeyProvider()
-        key = provider.get_private_key()
+        key = provider.load_wallets()[0].raw_key
         assert bytes(key) == TEST_BYTES
 
     def test_world_readable_file_rejected(self, tmp_path, monkeypatch):
@@ -123,7 +123,7 @@ class TestFileKeyProvider:
         monkeypatch.setenv("PRIVATE_KEY_FILE", str(key_file))
         kp = _import_kp()
         with pytest.raises(SystemExit):
-            kp.FileKeyProvider().get_private_key()
+            kp.FileKeyProvider().load_wallets()
 
     def test_group_readable_file_rejected(self, tmp_path, monkeypatch):
         key_file = tmp_path / "treasury.key"
@@ -132,19 +132,19 @@ class TestFileKeyProvider:
         monkeypatch.setenv("PRIVATE_KEY_FILE", str(key_file))
         kp = _import_kp()
         with pytest.raises(SystemExit):
-            kp.FileKeyProvider().get_private_key()
+            kp.FileKeyProvider().load_wallets()
 
     def test_missing_file_exits(self, tmp_path, monkeypatch):
         monkeypatch.setenv("PRIVATE_KEY_FILE", str(tmp_path / "does_not_exist"))
         kp = _import_kp()
         with pytest.raises(SystemExit):
-            kp.FileKeyProvider().get_private_key()
+            kp.FileKeyProvider().load_wallets()
 
     def test_unset_path_exits(self, monkeypatch):
         monkeypatch.setenv("PRIVATE_KEY_FILE", "")
         kp = _import_kp()
         with pytest.raises(SystemExit):
-            kp.FileKeyProvider().get_private_key()
+            kp.FileKeyProvider().load_wallets()
 
 
 # ---------------------------------------------------------------------------
@@ -160,14 +160,15 @@ class TestOnePasswordKeyProvider:
         fake.stdout = TEST_HEX.encode() + b"\n"
         fake.stderr = b""
         with patch("skr_crypto.server.key_providers.subprocess.run", return_value=fake):
-            key = kp.OnePasswordKeyProvider().get_private_key()
-        assert bytes(key) == TEST_BYTES
+            wallets = kp.OnePasswordKeyProvider().load_wallets()
+        assert len(wallets) == 1
+        assert bytes(wallets[0].raw_key) == TEST_BYTES
 
     def test_op_not_found_exits(self):
         kp = _import_kp()
         with patch("skr_crypto.server.key_providers.subprocess.run", side_effect=FileNotFoundError()):
             with pytest.raises(SystemExit):
-                kp.OnePasswordKeyProvider().get_private_key()
+                kp.OnePasswordKeyProvider().load_wallets()
 
     def test_op_nonzero_exits(self):
         kp = _import_kp()
@@ -177,7 +178,7 @@ class TestOnePasswordKeyProvider:
         fake.stderr = b"not signed in"
         with patch("skr_crypto.server.key_providers.subprocess.run", return_value=fake):
             with pytest.raises(SystemExit):
-                kp.OnePasswordKeyProvider().get_private_key()
+                kp.OnePasswordKeyProvider().load_wallets()
 
 
 # ---------------------------------------------------------------------------
@@ -194,14 +195,15 @@ class TestKeychainKeyProvider:
         fake.stdout = TEST_HEX.encode() + b"\n"
         fake.stderr = b""
         with patch("skr_crypto.server.key_providers.subprocess.run", return_value=fake):
-            key = kp.KeychainKeyProvider().get_private_key()
-        assert bytes(key) == TEST_BYTES
+            wallets = kp.KeychainKeyProvider().load_wallets()
+        assert len(wallets) == 1
+        assert bytes(wallets[0].raw_key) == TEST_BYTES
 
     def test_non_darwin_exits(self, monkeypatch):
         kp = _import_kp()
         monkeypatch.setattr(sys, "platform", "linux")
         with pytest.raises(SystemExit):
-            kp.KeychainKeyProvider().get_private_key()
+            kp.KeychainKeyProvider().load_wallets()
 
     def test_security_returns_error_exits(self, monkeypatch):
         kp = _import_kp()
@@ -212,7 +214,7 @@ class TestKeychainKeyProvider:
         fake.stderr = b"The specified item could not be found in the keychain."
         with patch("skr_crypto.server.key_providers.subprocess.run", return_value=fake):
             with pytest.raises(SystemExit):
-                kp.KeychainKeyProvider().get_private_key()
+                kp.KeychainKeyProvider().load_wallets()
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +224,7 @@ class TestKeychainKeyProvider:
 
 class TestGetKeyProvider:
     def test_each_known_value_returns_correct_class(self, monkeypatch):
-        for name in ("1password", "env", "file", "keychain"):
+        for name in ("1password", "env", "file", "keychain", "encrypted_file"):
             monkeypatch.setenv("KEY_PROVIDER", name)
             import skr_crypto.server.config as cfg
             importlib.reload(cfg)
@@ -240,6 +242,7 @@ class TestGetKeyProvider:
 
     def test_supported_providers_lists_all(self, monkeypatch):
         kp = _import_kp()
+        # 1.4.0 added encrypted_file as the fifth backend.
         assert set(kp.supported_providers()) == {
-            "1password", "env", "file", "keychain",
+            "1password", "env", "file", "keychain", "encrypted_file",
         }

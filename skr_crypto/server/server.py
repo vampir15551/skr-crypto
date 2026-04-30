@@ -20,13 +20,17 @@ from skr_crypto.server.exceptions import (
     PayoutError,
     RiskTooHigh,
     TransactionFailed,
+    WalletAutoPickFailed,
+    WalletNotFoundError,
+    WalletPoolEmptyError,
 )
 from skr_crypto.server.idempotency import IdempotencyConflict, UnresolvedIdempotency
 from skr_crypto.server.net import client_address
 from skr_crypto.server.routes import router
-from skr_crypto.server.security import lock_key_store
+from skr_crypto.server.security import load_wallets, lock_key_store
 from skr_crypto.server.shutdown import mark_started, reset_timer
 from skr_crypto.server.tron_client import tron
+from skr_crypto.server.wallet_pool import wallets
 
 log = logging.getLogger("payouts")
 
@@ -62,6 +66,11 @@ _limiter = _RateLimiter()
 async def lifespan(_app: FastAPI):
     # All sync calls — no await
     tron.init()
+    # Load every configured wallet through the active KeyProvider and
+    # populate the pool BEFORE we start serving traffic. The
+    # log line in WalletPool.init() prints the names so the operator
+    # can confirm "yes, these are the wallets I expected."
+    wallets.init(load_wallets())
     mark_started()
     reset_timer()
     # Refresh the OFAC SDN sanctions list (best-effort). The list is
@@ -86,6 +95,7 @@ async def lifespan(_app: FastAPI):
     log.info("Payout service ready")
     yield
     log.info("Payout service stopping")
+    wallets.destroy()
     tron.destroy()
     # Close the SQLite idempotency store (if that's the backend) so any
     # outstanding WAL is flushed. In-memory store's close() is a no-op.
@@ -180,6 +190,40 @@ def create_app() -> FastAPI:
     def handle_tx_failed(request: Request, exc: TransactionFailed):
         log.error("[ERROR] %s | %s", exc.code, exc.message)
         return JSONResponse(status_code=500, content={"error": "Transaction failed", "code": exc.code})
+
+    @app.exception_handler(WalletNotFoundError)
+    def handle_wallet_not_found(request: Request, exc: WalletNotFoundError):
+        # 404: caller asked for a wallet name we don't know.
+        log.warning("[ERROR] %s | name=%s available=%s", exc.code, exc.name, exc.available)
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": exc.message,
+                "code": exc.code,
+                "wallet": exc.name,
+                "available": exc.available,
+            },
+        )
+
+    @app.exception_handler(WalletPoolEmptyError)
+    def handle_wallet_pool_empty(request: Request, exc: WalletPoolEmptyError):
+        # 503: service is up but has nothing to sign with — operator must
+        # configure at least one wallet and restart.
+        log.error("[ERROR] %s | %s", exc.code, exc.message)
+        return JSONResponse(
+            status_code=503,
+            content={"error": exc.message, "code": exc.code},
+        )
+
+    @app.exception_handler(WalletAutoPickFailed)
+    def handle_wallet_autopick_failed(request: Request, exc: WalletAutoPickFailed):
+        # 503: every balance lookup failed during auto-pick. Caller can
+        # retry — pick an explicit wallet to bypass the lookup.
+        log.error("[ERROR] %s | %s", exc.code, exc.message)
+        return JSONResponse(
+            status_code=503,
+            content={"error": exc.message, "code": exc.code},
+        )
 
     @app.exception_handler(RiskTooHigh)
     def handle_risk_too_high(request: Request, exc: RiskTooHigh):

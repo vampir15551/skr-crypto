@@ -121,7 +121,7 @@ the audit-first invariant from `GUIDELINES.md`.
 
 ## Related
 
-- [`GUIDELINES.md` § Audit-first](../../GUIDELINES.md#audit-first)
-- [`ARCHITECTURE.md` § Failure modes & recovery](../../ARCHITECTURE.md#failure-modes--recovery)
-- [`runbooks/audit-recovery.md`](../../runbooks/audit-recovery.md)
+- [`GUIDELINES.md` § Audit-first](../architecture.md)
+- [`ARCHITECTURE.md` § Failure modes & recovery](../architecture.md)
+- [`runbooks/audit-recovery.md`](../audit-log.md)
 - `skr_crypto/server/audit.py`

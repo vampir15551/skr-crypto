@@ -9,6 +9,131 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-04-30
+
+The "multi-wallet treasury" release. The single-wallet shape is gone:
+the service now loads a pool of named wallets at startup and routes
+every signing operation through it. Adds a fifth key provider —
+`encrypted_file` — so Docker / VPS deploys can keep their keys at
+rest with the same "encrypted in storage, decrypted only in process
+memory" guarantee that 1Password gives operator-on-laptop installs.
+
+This is a hard-cut refactor: wire formats change for `/send`,
+`/balance`, audit records, and HTTP responses. There's no compat
+shim because the multi-wallet field is genuinely meaningful — call
+sites should be updated, not papered over.
+
+### Added
+- **`skr_crypto.server.encrypted_keystore`** — AES-256-GCM keystore
+  module. Format: one chmod-600 JSON file holding any number of
+  wallets, each encrypted with a per-entry IV and AAD bound to the
+  wallet name. Single scrypt-derived key (n=32768, r=8, p=1) per
+  file. Atomic writes via `O_EXCL` temp + rename. Public API:
+  `init_keystore`, `load_keystore`, `add_wallet`, `remove_wallet`,
+  `rename_wallet`, `list_wallet_names`, `resolve_passphrase`.
+- **`KEY_PROVIDER=encrypted_file`** — fifth backend. Reads the
+  keystore at `KEYSTORE_FILE`. Passphrase resolution chain:
+  `KEY_PASSPHRASE` env → `KEY_PASSPHRASE_FILE` chmod-600 file →
+  interactive `getpass` if stdin is a TTY. Multi-wallet by
+  construction (one file holds N keys).
+- **`skr_crypto.server.wallet.Wallet`** — name + address + PrivateKey.
+  Owns the only `.sign()` call site. Replaces the old
+  `tron.priv_key` / `tron.address` singleton state.
+- **`skr_crypto.server.wallet_pool.WalletPool`** — process-wide pool
+  with auto-pick by max USDT balance. Resolution policy:
+  named lookup first, then single-wallet shortcut, then live balance
+  poll. Auto-pick failures distinguish "no wallets" (503) from
+  "balance lookups all failed" (503 with retry suggestion).
+- **`/api/v1/wallets`** — list every configured wallet with live
+  balances + the auto-pick winner. Authenticated. Cost: N RPCs;
+  for single-wallet deploys it's the same cost as `/balance`.
+- **`SendRequest.wallet`** — optional source-wallet name on `/send`.
+  Omit for auto-pick (multi-wallet) or to use the only wallet
+  (single-wallet). The chosen wallet name is echoed back in
+  `SendResponse.wallet`, the `[SEND] ...` log line, and every
+  `SEND_*` audit record.
+- **`?wallet=NAME`** query parameter on `/balance` (same auto-pick
+  semantics as `/send`).
+- **Per-wallet env vars** for env / file / 1password / keychain
+  backends when `WALLETS=name1,name2` is set:
+  - `WALLET_<NAME>_PRIVATE_KEY_HEX` (env)
+  - `WALLET_<NAME>_PRIVATE_KEY_FILE` (file)
+  - `WALLET_<NAME>_OP_ITEM` (1password; vault/field stay shared)
+  - `WALLET_<NAME>_KEYCHAIN_ACCOUNT` (keychain; service stays shared)
+  Single-wallet legacy globals (`PRIVATE_KEY_HEX`, etc.) keep
+  working when `WALLETS` is empty — they load as wallet `default`.
+- **`skr-crypto wallet` CLI subgroup** — `list`, `show NAME`,
+  `add NAME`, `generate NAME`, `remove NAME`, `rename OLD NEW`,
+  `encrypt`. The mutating commands write to the encrypted keystore
+  directly; for env / file / 1password / keychain they print the
+  exact env-var / file-path layout the operator needs to apply.
+- **`skr-crypto wallet encrypt`** — one-shot migration that
+  initialises an encrypted keystore and seeds it from `--from-hex`
+  or `--from-env PRIVATE_KEY_HEX`. Prompts for the passphrase
+  twice, refuses to overwrite an existing keystore (use `--force`).
+- **`balance --wallet NAME`** — pick a specific wallet for the
+  CLI's balance output.
+- **Wallet-aware exception types** — `WalletNotFoundError` (404),
+  `WalletPoolEmptyError` (503), `WalletAutoPickFailed` (503).
+  Each gets a dedicated FastAPI handler so callers see precise
+  codes instead of opaque 500s.
+- **`audit.record(wallet=...)`** — durable trail now carries the
+  wallet name on every `SEND_*` event alongside `from_address`.
+- **`HealthResponse.wallet_count` + `wallet_names`** — readiness
+  probe surfaces what's loaded so dashboards can spot a
+  zero-wallet boot before any /send arrives.
+- **`encrypted_file` option in the `skr-crypto install` wizard**
+  with the keystore path as a follow-up prompt.
+
+### Changed
+- **`TronClient` is now keyless.** Methods take an `address`
+  argument: `get_trx_balance_for(addr)`, `get_usdt_balance_for(addr)`,
+  `get_account_resource_for(addr)`, `get_resource_summary_for(addr)`,
+  `estimate_transfer_energy(from_addr, to_addr, amount)`. The old
+  zero-arg variants are gone. Signing moves to `Wallet.send_usdt`.
+- **`/send` request shape** — adds optional `wallet` field. Existing
+  clients that omit it keep working in single-wallet deploys.
+- **`/send` response shape** — adds `wallet` field (the wallet that
+  signed). Clients that ignored unknown fields are unaffected;
+  clients that pinned the schema must regenerate.
+- **`/balance` response shape** — adds `wallet` field next to
+  `address`. Same compatibility note as `/send`.
+- **`/health` response shape** — drops the per-wallet snapshot
+  (energy / bandwidth / TRON power). For multi-wallet pools this
+  was either misleading (which wallet?) or expensive (poll all of
+  them). Replaced with `wallet_count` + `wallet_names`. Use
+  `/wallets` for live per-wallet detail.
+- **`KEY_PROVIDER` validation** — accepts `encrypted_file` as a
+  fifth value.
+- **CLI `balance` table** — adds the `wallet` row.
+- **`docker-compose.yml`** — refreshed top comment with the three
+  realistic Docker key-provider patterns and the `KEYSTORE_FILE`
+  default mount layout.
+- **Dependencies** — adds `cryptography>=42,<46` to the `[server]`
+  extra. Pure-Python wheels exist for every supported platform;
+  no system openssl-dev required.
+
+### Removed
+- **`tron.address` / `tron.priv_key`** module-level state. Use
+  `wallets.get(name)` or `wallets.resolve(name)` and read
+  `.address` / `.priv_key` off the returned `Wallet`.
+- **`tron.send_usdt(...)`** — moved to `Wallet.send_usdt(client,
+  contract, ...)`. The route layer wires this together; nothing
+  outside `routes.py` should be calling it.
+- **`security.load_private_key()`** — replaced by `load_wallets()`
+  which returns a `list[Wallet]`.
+
+### Migration
+- Single-wallet deploys keep working: omit the new `wallet` field
+  from `/send`, leave `WALLETS` unset, keep your existing
+  `PRIVATE_KEY_HEX` / `PRIVATE_KEY_FILE` / etc. The wallet loads
+  as name `default`.
+- To go multi-wallet: set `WALLETS=name1,name2,...` and add per-wallet
+  env vars (or migrate to `KEY_PROVIDER=encrypted_file` and use the
+  CLI). Restart.
+- Code/tests calling old TronClient methods need to switch to the
+  address-parameterised variants. There is no shim.
+
 ## [1.3.0] — 2026-04-29
 
 The "real AML" release. Risk preflight gains an OFAC SDN sanctions

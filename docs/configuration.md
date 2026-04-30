@@ -24,17 +24,31 @@ hand only when you need to.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `KEY_PROVIDER` | `env` | One of `env` / `file` / `1password` / `keychain` |
-| `OP_VAULT` | `Treasury` | (1password) vault name |
-| `OP_ITEM` | `TRON-Treasury` | (1password) item name |
+| `KEY_PROVIDER` | `1password` | One of `env` / `file` / `1password` / `keychain` / `encrypted_file` |
+| `WALLETS` | (empty) | Comma-separated wallet names. Empty → single-wallet legacy globals below. |
+| `OP_VAULT` | `Treasury` | (1password) vault name; shared across multi-wallet |
+| `OP_ITEM` | `TRON-Treasury` | (1password) item name (single-wallet legacy) |
 | `OP_FIELD` | `password` | (1password) field name |
-| `PRIVATE_KEY_FILE` | (none) | (file) path to chmod-600 file with raw hex |
-| `KEYCHAIN_SERVICE` | `payouts` | (keychain) macOS keychain `-s` |
-| `KEYCHAIN_ACCOUNT` | `treasury` | (keychain) macOS keychain `-a` |
+| `PRIVATE_KEY_FILE` | (none) | (file) path to chmod-600 file with raw hex (single-wallet legacy) |
+| `KEYCHAIN_SERVICE` | `skr-crypto` | (keychain) macOS keychain `-s`; shared across multi-wallet |
+| `KEYCHAIN_ACCOUNT` | `treasury` | (keychain) macOS keychain `-a` (single-wallet legacy) |
+| `KEYSTORE_FILE` | (none) | (encrypted_file) path to chmod-600 AES-256-GCM JSON |
+| `KEY_PASSPHRASE` | (none) | (encrypted_file) env-supplied passphrase. Consumed + cleared from `os.environ`. |
+| `KEY_PASSPHRASE_FILE` | (none) | (encrypted_file) chmod-600 file with the passphrase. Used when `KEY_PASSPHRASE` empty. |
 
-`PRIVATE_KEY_HEX` is read by the `env` provider — set it in the
-process environment, **not** in `.env`. The CLI's `install` does
-not write it to disk.
+For multi-wallet (`WALLETS` set) the per-wallet variables are:
+
+| Provider | Per-wallet variable |
+|---|---|
+| `env` | `WALLET_<NAME>_PRIVATE_KEY_HEX` |
+| `file` | `WALLET_<NAME>_PRIVATE_KEY_FILE` |
+| `1password` | `WALLET_<NAME>_OP_ITEM` |
+| `keychain` | `WALLET_<NAME>_KEYCHAIN_ACCOUNT` |
+| `encrypted_file` | n/a — keystore file is the source of truth |
+
+`PRIVATE_KEY_HEX` (single-wallet) and `WALLET_<NAME>_PRIVATE_KEY_HEX` (multi-wallet) are read by the `env` provider — set them in the **process environment**, not in `.env`. The CLI's `install` does not write them to disk.
+
+See [Key providers](key-providers.md) for the full backend comparison and [Multi-wallet pool](multi-wallet.md) for `WALLETS=` semantics.
 
 ### TRON network
 
@@ -54,6 +68,18 @@ not write it to disk.
 | `TRON_ENERGY_PRICE_SUN_FALLBACK` | `420` | Used if chain query fails |
 | `MAX_ENERGY_BURN_TRX` | `20` | Reject `/send` if estimate > this. `0` disables. |
 | `FEE_LIMIT_SAFETY_MULT` | `1.3` | Headroom multiplier on the energy estimate |
+
+### Recipient risk preflight
+
+| Variable | Default | Notes |
+|---|---|---|
+| `RISK_BLOCK_LEVEL` | `high` | Block `/send` at this level. `none` / `medium` / `high`. |
+| `RISK_USE_EXTERNAL` | `true` | Query TronScan reputation (~+300ms per /send) |
+| `MISTTRACK_API_KEY` | (none) | Opt in to MistTrack AML (`high` on score ≥ 60). Free tier ~100/day. |
+| `SANCTIONS_LIST_URL` | OFAC TRX list on GitHub | Source of OFAC SDN list |
+| `SANCTIONS_LIST_REFRESH` | `true` | Fetch on every boot. `false` = use on-disk cache only (air-gapped). |
+
+See [Risk preflight](risk-preflight.md) for the full check matrix.
 
 ### Persistence
 

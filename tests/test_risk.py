@@ -65,7 +65,7 @@ class TestValidity:
         # Make every downstream check pass cleanly.
         mock_tron.client.get_account = MagicMock(return_value={"create_time": 1700000000_000})
         mock_tron.client.get_contract = MagicMock(side_effect=Exception("not a contract"))
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
         mock_tron.get_destination_info = MagicMock(return_value={
             "exists": True, "trx_balance": Decimal("1"), "usdt_balance": Decimal("100"),
         })
@@ -87,7 +87,7 @@ class TestBurnAddress:
         # We need the rest of the checks to behave; mock generously.
         mock_tron.client.get_account = MagicMock(return_value={})
         mock_tron.client.get_contract = MagicMock(side_effect=Exception())
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
         mock_tron.get_destination_info = MagicMock(return_value={
             "exists": False, "trx_balance": Decimal("0"), "usdt_balance": Decimal("0"),
         })
@@ -113,7 +113,7 @@ class TestUsdtBlacklist:
 
     def test_blacklisted_blocks_high(self, mock_tron):
         self._setup_clean(mock_tron)
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(
             return_value=True,
         )
         report = assess_risk(VALID)
@@ -124,7 +124,7 @@ class TestUsdtBlacklist:
 
     def test_rpc_failure_skips_not_fails(self, mock_tron):
         self._setup_clean(mock_tron)
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(
             side_effect=RuntimeError("503 from TronGrid"),
         )
         report = assess_risk(VALID)
@@ -143,7 +143,7 @@ class TestUsdtBlacklist:
 class TestActivation:
     def _setup_clean(self, mock_tron):
         mock_tron.client.get_contract = MagicMock(side_effect=Exception())
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
         mock_tron.get_destination_info = MagicMock(return_value={
             "exists": False, "trx_balance": Decimal("0"), "usdt_balance": Decimal("0"),
         })
@@ -180,7 +180,7 @@ class TestActivation:
 class TestSmartContract:
     def _setup_clean(self, mock_tron):
         mock_tron.client.get_account = MagicMock(return_value={"create_time": 1700000000_000})
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
         mock_tron.get_destination_info = MagicMock(return_value={
             "exists": True, "trx_balance": Decimal("1"), "usdt_balance": Decimal("0"),
         })
@@ -206,7 +206,7 @@ class TestSanctions:
             "create_time": 1700000000_000,
         })
         mock_tron.client.get_contract = MagicMock(side_effect=Exception())
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(
             return_value=False,
         )
         mock_tron.get_destination_info = MagicMock(return_value={
@@ -253,7 +253,7 @@ class TestExternalTronScan:
     def _setup_clean(self, mock_tron):
         mock_tron.client.get_account = MagicMock(return_value={"create_time": 1700000000_000})
         mock_tron.client.get_contract = MagicMock(side_effect=Exception())
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
         mock_tron.get_destination_info = MagicMock(return_value={
             "exists": True, "trx_balance": Decimal("1"), "usdt_balance": Decimal("0"),
         })
@@ -316,7 +316,7 @@ class TestExternalMistTrack:
     def _setup_clean(self, mock_tron):
         mock_tron.client.get_account = MagicMock(return_value={"create_time": 1700000000_000})
         mock_tron.client.get_contract = MagicMock(side_effect=Exception())
-        mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+        mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
         mock_tron.get_destination_info = MagicMock(return_value={
             "exists": True, "trx_balance": Decimal("1"), "usdt_balance": Decimal("0"),
         })
@@ -466,7 +466,7 @@ def test_should_block(level, block_at, expected):
 def test_report_to_dict_shape(mock_tron):
     mock_tron.client.get_account = MagicMock(return_value={"create_time": 1700000000_000})
     mock_tron.client.get_contract = MagicMock(side_effect=Exception())
-    mock_tron._get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
+    mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=False)
     mock_tron.get_destination_info = MagicMock(return_value={
         "exists": True, "trx_balance": Decimal("1"), "usdt_balance": Decimal("0"),
     })

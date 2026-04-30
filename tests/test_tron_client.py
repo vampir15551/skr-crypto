@@ -88,15 +88,16 @@ class TestSendUsdtBroadcastResult:
     """Critical: broadcast() returning anything other than an unambiguous
     success must raise — otherwise an empty txid would be cached as 'the
     txid' and all subsequent retries would return status=duplicate with
-    no real on-chain transaction."""
+    no real on-chain transaction.
 
-    def _make_client(self, mock_tron, broadcast_response):
-        """Wire a TronClient stub whose contract.transfer().build().sign()
-        chain returns a broadcastable txn."""
-        client = TronClient()
-        client.client = mock_tron.client
-        client.priv_key = mock_tron.priv_key
-        client.address = mock_tron.address
+    1.4.0 moved signing from TronClient into Wallet, but the broadcast-
+    response handling is identical. Tests now build a Wallet directly.
+    """
+
+    def _make_wallet_and_contract(self, broadcast_response):
+        """Wallet + contract where ``contract.transfer().build().sign()
+        .broadcast()`` returns ``broadcast_response``."""
+        from skr_crypto.server.wallet import Wallet
 
         txn_mock = MagicMock()
         txn_mock.broadcast = MagicMock(return_value=broadcast_response)
@@ -109,46 +110,71 @@ class TestSendUsdtBroadcastResult:
 
         contract_mock = MagicMock()
         contract_mock.functions.transfer.return_value = builder
-        client._usdt_contract = contract_mock
-        return client
 
-    def test_success(self, mock_tron):
-        client = self._make_client(mock_tron, {"result": True, "txid": "a" * 64})
-        txid = client.send_usdt("TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"))
+        wallet = Wallet(
+            name="default",
+            address="TTestAddress1234567890123456789012",
+            priv_key=MagicMock(),
+        )
+        return wallet, contract_mock
+
+    def test_success(self):
+        wallet, contract = self._make_wallet_and_contract(
+            {"result": True, "txid": "a" * 64},
+        )
+        txid = wallet.send_usdt(
+            MagicMock(), contract,
+            "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
+        )
         assert txid == "a" * 64
 
-    def test_empty_txid_raises(self, mock_tron):
+    def test_empty_txid_raises(self):
         """Even if result=True, an empty txid is unsafe to cache."""
-        client = self._make_client(mock_tron, {"result": True, "txid": ""})
+        wallet, contract = self._make_wallet_and_contract(
+            {"result": True, "txid": ""},
+        )
         with pytest.raises(RuntimeError, match="empty txid"):
-            client.send_usdt("TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"))
+            wallet.send_usdt(
+                MagicMock(), contract,
+                "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
+            )
 
-    def test_missing_txid_raises(self, mock_tron):
-        client = self._make_client(mock_tron, {"result": True})
+    def test_missing_txid_raises(self):
+        wallet, contract = self._make_wallet_and_contract({"result": True})
         with pytest.raises(RuntimeError, match="empty txid"):
-            client.send_usdt("TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"))
+            wallet.send_usdt(
+                MagicMock(), contract,
+                "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
+            )
 
-    def test_node_rejection_raises(self, mock_tron):
-        client = self._make_client(
-            mock_tron,
+    def test_node_rejection_raises(self):
+        wallet, contract = self._make_wallet_and_contract(
             {"code": "BANDWIDTH_ERROR", "message": "out of bandwidth"},
         )
         with pytest.raises(RuntimeError, match="broadcast rejected"):
-            client.send_usdt("TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"))
+            wallet.send_usdt(
+                MagicMock(), contract,
+                "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
+            )
 
-    def test_result_false_raises_even_with_txid(self, mock_tron):
+    def test_result_false_raises_even_with_txid(self):
         """Some failure modes return both result=False and a txid; reject anyway."""
-        client = self._make_client(
-            mock_tron,
+        wallet, contract = self._make_wallet_and_contract(
             {"result": False, "code": "SIGERROR", "txid": "deadbeef"},
         )
         with pytest.raises(RuntimeError, match="broadcast rejected"):
-            client.send_usdt("TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"))
+            wallet.send_usdt(
+                MagicMock(), contract,
+                "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
+            )
 
-    def test_unexpected_response_type_raises(self, mock_tron):
-        client = self._make_client(mock_tron, "not a dict")
+    def test_unexpected_response_type_raises(self):
+        wallet, contract = self._make_wallet_and_contract("not a dict")
         with pytest.raises(RuntimeError, match="unexpected broadcast response type"):
-            client.send_usdt("TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"))
+            wallet.send_usdt(
+                MagicMock(), contract,
+                "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
+            )
 
 
 class TestEnergyPriceTTL:

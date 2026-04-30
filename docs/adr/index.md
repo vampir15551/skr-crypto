@@ -12,9 +12,11 @@ warrant one.
 | # | Title | Summary |
 |---|---|---|
 | [0001](0001-sync-only-architecture.md) | Sync-only architecture, no asyncio on the money path | Internal logic is synchronous; async exists only at the FastAPI boundary, never past the route handler. |
-| [0002](0002-pluggable-key-providers.md) | Pluggable secret backends via KeyProvider abstraction | Four `KeyProvider` backends (`env`, `file`, `keychain`, `1password`) selected by `KEY_PROVIDER` env var, validated at boot. |
+| [0002](0002-pluggable-key-providers.md) | Pluggable secret backends via KeyProvider abstraction | Five `KeyProvider` backends (`env`, `file`, `keychain`, `1password`, `encrypted_file`) selected by `KEY_PROVIDER` env var, validated at boot. |
 | [0003](0003-msk-day-reconciliation.md) | MSK-day window for startup reconciliation | The boot self-check window is `[midnight MSK today, now]`, hardcoded; cross-midnight checks are a manual `skr-crypto reconcile` invocation. |
 | [0004](0004-audit-hard-error.md) | Audit write failure is a hard error, not a warning | A failed `_write_durable` raises `AuditWriteError`, releases the idempotency slot, and returns `HTTP 500` to the client; the broadcast does not happen. |
+| [0005](0005-multi-wallet-pool.md) | Multi-wallet routing via WalletPool with auto-pick by max USDT | Service holds N keys; every signing op resolves through `wallets.resolve(name)`; auto-pick by USDT when `wallet=` is omitted. |
+| [0006](0006-encrypted-keystore.md) | Encrypted-file keystore: AES-256-GCM + scrypt + per-entry IV with name-bound AAD | Single chmod-600 JSON file holds N wallets behind one passphrase; replaces 1Password as the recommended container-friendly backend. |
 
 ## Format
 

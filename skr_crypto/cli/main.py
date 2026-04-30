@@ -74,6 +74,7 @@ def _register() -> None:
         status,
         update,
         version_cmd,
+        wallet,
     )
 
     cli.add_command(install.cmd)
@@ -90,6 +91,7 @@ def _register() -> None:
     cli.add_command(reconcile.cmd)
     cli.add_command(config_cmd.config_group)
     cli.add_command(keygen.cmd)
+    cli.add_command(wallet.group)
     cli.add_command(backup.cmd)
     cli.add_command(restore.cmd)
     cli.add_command(doctor.cmd)

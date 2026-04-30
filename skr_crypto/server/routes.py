@@ -6,7 +6,7 @@ import time
 from decimal import Decimal
 
 import base58
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
 
 from skr_crypto.server import audit, metrics
@@ -24,6 +24,9 @@ from skr_crypto.server.exceptions import (
     PayoutError,
     RiskTooHigh,
     TransactionFailed,
+    WalletAutoPickFailed,
+    WalletNotFoundError,
+    WalletPoolEmptyError,
 )
 from skr_crypto.server.idempotency import idempotency
 from skr_crypto.server.models import (
@@ -33,6 +36,8 @@ from skr_crypto.server.models import (
     SendRequest,
     SendResponse,
     VersionResponse,
+    WalletListResponse,
+    WalletSummary,
 )
 from skr_crypto.server.net import client_address
 from skr_crypto.server.risk import assess_risk, should_block
@@ -40,6 +45,18 @@ from skr_crypto.server.security import verify_api_key
 from skr_crypto.server.shutdown import seconds_remaining, uptime
 from skr_crypto.server.tron_client import tron
 from skr_crypto.server.version import GIT_SHA, START_TIME
+from skr_crypto.server.wallet_pool import (
+    WalletAutoPickFailed as PoolAutoPickFailed,
+)
+from skr_crypto.server.wallet_pool import (
+    WalletNotFound as PoolWalletNotFound,
+)
+from skr_crypto.server.wallet_pool import (
+    WalletPoolEmpty as PoolEmpty,
+)
+from skr_crypto.server.wallet_pool import (
+    wallets,
+)
 
 log = logging.getLogger("payouts")
 
@@ -50,8 +67,26 @@ router = APIRouter(prefix="/api/v1")
 # enough that 2-3 concurrent sends burst over the limit (each /send issues
 # 5-7 RPCs: balance, TRX balance, destination info, estimate, broadcast).
 # A single in-flight send keeps us well under the ceiling and turns races
-# into a queue — slower under load but no 429 cascades.
+# into a queue — slower under load but no 429 cascades. The lock is global
+# rather than per-wallet because the rate-limit ceiling is shared.
 _send_lock = threading.Lock()
+
+
+def _resolve_wallet(name: str | None):
+    """Translate WalletPool errors into PayoutError subclasses.
+
+    Endpoints that resolve a wallet (``/send``, ``/balance``) do this so
+    the FastAPI exception handlers can return precise 4xx codes instead
+    of an opaque 500.
+    """
+    try:
+        return wallets.resolve(name, tron_client=tron)
+    except PoolWalletNotFound as exc:
+        raise WalletNotFoundError(exc.name, exc.available)
+    except PoolEmpty:
+        raise WalletPoolEmptyError()
+    except PoolAutoPickFailed as exc:
+        raise WalletAutoPickFailed(str(exc))
 
 
 # --------------------------------------------------------------------------
@@ -70,11 +105,18 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
     amount = req.amount
 
     log.info(
-        "[SEND] Incoming | ip=%s to=%s amount=%s key=%s",
-        client_ip, req.to_address, req.amount, req.idempotency_key,
+        "[SEND] Incoming | ip=%s wallet=%s to=%s amount=%s key=%s",
+        client_ip, req.wallet or "<auto>", req.to_address, req.amount,
+        req.idempotency_key,
     )
 
-    # ── Validate address first (cheap, deterministic) ────────────────────
+    # ── Resolve source wallet first ──────────────────────────────────────
+    # Either the explicit name was given (must exist) or auto-pick by
+    # max USDT. Errors here turn into 400/404 — see exception handlers.
+    wallet = _resolve_wallet(req.wallet)
+    log.info("[SEND] Using wallet | name=%s address=%s", wallet.name, wallet.address)
+
+    # ── Validate destination address ─────────────────────────────────────
     # Done before reserving the idempotency slot so a malformed address
     # never poisons the store.
     _validate_tron_address(req.to_address)
@@ -82,11 +124,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
     # ── Recipient risk preflight ─────────────────────────────────────────
     # Catches OFAC-sanctioned addresses, Tether blacklist, smart-contract
     # destinations, known-burn patterns, and unactivated accounts BEFORE
-    # we burn fee_limit on a doomed broadcast. Configurable via
-    # RISK_BLOCK_LEVEL (high / medium / none) and RISK_USE_EXTERNAL
-    # (TronScan + MistTrack-if-keyed). The level is propagated through
-    # to the SEND_SUCCESS audit and SUCCESS log line so post-mortem
-    # forensics can see every transfer's risk verdict.
+    # we burn fee_limit on a doomed broadcast.
     risk_report = None
     risk_level_str = "skipped"
     if RISK_BLOCK_LEVEL != "none":
@@ -107,7 +145,8 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
             ]
             audit.record(
                 "SEND_REJECTED",
-                from_address=tron.address,
+                wallet=wallet.name,
+                from_address=wallet.address,
                 to_address=req.to_address,
                 amount=str(amount),
                 idempotency_key=req.idempotency_key,
@@ -125,17 +164,13 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
             )
 
     # ── Reserve the idempotency slot atomically ──────────────────────────
-    # reserve() returns:
-    #   None      → we own the slot, must commit() or release() it
-    #   "<txid>"  → already committed by an earlier request (duplicate)
-    #   blocks    → another request is in flight; waits for it then returns
-    #               its txid (or raises IdempotencyConflict on timeout/failure)
     existing_txid = idempotency.reserve(req.idempotency_key)
     if existing_txid is not None:
         log.warning("[SEND] DUPLICATE | key=%s txid=%s", req.idempotency_key, existing_txid)
         audit.record(
             "SEND_DUPLICATE",
-            from_address=tron.address,
+            wallet=wallet.name,
+            from_address=wallet.address,
             to_address=req.to_address,
             amount=str(req.amount),
             txid=existing_txid,
@@ -146,31 +181,23 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
         metrics.tx_duplicate_total.inc()
         return SendResponse(
             txid=existing_txid,
-            from_address=tron.address,
+            from_address=wallet.address,
+            wallet=wallet.name,
             to_address=req.to_address,
             amount=str(req.amount),
             idempotency_key=req.idempotency_key,
             status="duplicate",
         )
 
-    # From here on, we hold the reservation. Anything that aborts before
-    # commit() must release() it, otherwise future retries with the same
-    # key will block until the wait timeout.
     try:
-        # Preflight RPCs (balance / TRX / destination / estimate) are wrapped
-        # so any transient TronGrid failure (429, 5xx, timeout, connection
-        # reset) lands in audit.log as SEND_FAILED rpc_failed instead of
-        # escaping as an unhandled HTTPError → ASGI traceback → opaque 500.
-        # Structured rejections (InsufficientBalance, EnergyTooExpensive)
-        # raise PayoutError and are re-raised untouched so their own
-        # SEND_REJECTED audit + 400 handler still apply.
         try:
             # ── Check USDT balance ───────────────────────────────────────
-            balance = tron.get_usdt_balance()
+            balance = tron.get_usdt_balance_for(wallet.address)
             if balance < amount:
                 audit.record(
                     "SEND_REJECTED",
-                    from_address=tron.address,
+                    wallet=wallet.name,
+                    from_address=wallet.address,
                     to_address=req.to_address,
                     amount=str(amount),
                     idempotency_key=req.idempotency_key,
@@ -182,11 +209,12 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                 raise InsufficientBalance("USDT", str(balance), str(amount))
 
             # ── Check TRX for fees ───────────────────────────────────────
-            trx_balance = tron.get_trx_balance()
+            trx_balance = tron.get_trx_balance_for(wallet.address)
             if trx_balance < MIN_TRX_RESERVE:
                 audit.record(
                     "SEND_REJECTED",
-                    from_address=tron.address,
+                    wallet=wallet.name,
+                    from_address=wallet.address,
                     to_address=req.to_address,
                     amount=str(amount),
                     idempotency_key=req.idempotency_key,
@@ -197,16 +225,9 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                 metrics.tx_rejected_total.labels(reason="insufficient_trx").inc()
                 raise InsufficientBalance("TRX", str(trx_balance), str(MIN_TRX_RESERVE))
 
-            # Keep balance gauges fresh any time we hit get_*_balance in the
-            # hot path — lets /metrics scrapers see current state without a
-            # dedicated RPC poll of their own.
             metrics.record_balances(trx_balance, balance)
 
             # ── Pre-flight: destination warmth & activation ──────────────
-            # Diagnostic only — best-effort, never blocks the send. Tagging
-            # cold (zero USDT balance) vs warm makes the ~13k-vs-32k energy
-            # split obvious in logs and explains retry-flake patterns where
-            # the same key sometimes burns out and sometimes lands.
             dest_info = tron.get_destination_info(req.to_address)
             recipient_warmth = "cold" if dest_info["usdt_balance"] == 0 else "warm"
             log.info(
@@ -216,14 +237,9 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
             )
 
             # ── Pre-flight energy estimate + dynamic fee_limit ───────────
-            # Two goals:
-            #   (1) Cap the worst-case burn: if a contract storage hot spot
-            #       suddenly costs 100k energy, we only burn what fee_limit
-            #       allows, not the full USDT_FEE_LIMIT_SUN.
-            #   (2) Refuse outright if even the estimated burn exceeds the
-            #       operator's MAX_ENERGY_BURN_TRX — forces them to stake/rent
-            #       instead of silently bleeding TRX.
-            estimated_energy = tron.estimate_transfer_energy(req.to_address, amount)
+            estimated_energy = tron.estimate_transfer_energy(
+                wallet.address, req.to_address, amount,
+            )
             estimated_burn_trx: Decimal | None = None
             if estimated_energy:
                 energy_price = tron.energy_price_sun()
@@ -239,7 +255,8 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                 if MAX_ENERGY_BURN_TRX > 0 and estimated_burn_trx > MAX_ENERGY_BURN_TRX:
                     audit.record(
                         "SEND_REJECTED",
-                        from_address=tron.address,
+                        wallet=wallet.name,
+                        from_address=wallet.address,
                         to_address=req.to_address,
                         amount=str(amount),
                         idempotency_key=req.idempotency_key,
@@ -268,12 +285,13 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
         except Exception as exc:
             elapsed = time.time() - started
             log.error(
-                "[SEND] PREFLIGHT_FAILED | %s: %s | to=%s amount=%s elapsed=%.2fs",
-                type(exc).__name__, exc, req.to_address, amount, elapsed,
+                "[SEND] PREFLIGHT_FAILED | %s: %s | wallet=%s to=%s amount=%s elapsed=%.2fs",
+                type(exc).__name__, exc, wallet.name, req.to_address, amount, elapsed,
             )
             audit.record(
                 "SEND_FAILED",
-                from_address=tron.address,
+                wallet=wallet.name,
+                from_address=wallet.address,
                 to_address=req.to_address,
                 amount=str(amount),
                 idempotency_key=req.idempotency_key,
@@ -286,21 +304,28 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
 
         # ── Broadcast transaction ────────────────────────────────────────
         log.info(
-            "[SEND] Broadcasting | %s -> %s amount=%s USDT fee_limit=%d sun",
-            tron.address, req.to_address, amount, fee_limit_sun,
+            "[SEND] Broadcasting | wallet=%s %s -> %s amount=%s USDT fee_limit=%d sun",
+            wallet.name, wallet.address, req.to_address, amount, fee_limit_sun,
         )
 
         try:
-            txid = tron.send_usdt(req.to_address, amount, fee_limit_sun=fee_limit_sun)
+            txid = wallet.send_usdt(
+                tron.client,
+                tron.get_usdt_contract(),
+                req.to_address,
+                amount,
+                fee_limit_sun=fee_limit_sun,
+            )
         except Exception as exc:
             elapsed = time.time() - started
             log.error(
-                "[SEND] FAILED | %s: %s | to=%s amount=%s elapsed=%.2fs",
-                type(exc).__name__, exc, req.to_address, amount, elapsed,
+                "[SEND] FAILED | %s: %s | wallet=%s to=%s amount=%s elapsed=%.2fs",
+                type(exc).__name__, exc, wallet.name, req.to_address, amount, elapsed,
             )
             audit.record(
                 "SEND_FAILED",
-                from_address=tron.address,
+                wallet=wallet.name,
+                from_address=wallet.address,
                 to_address=req.to_address,
                 amount=str(amount),
                 idempotency_key=req.idempotency_key,
@@ -312,14 +337,9 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
             metrics.tx_duration_seconds.labels(result="failed").observe(elapsed)
             raise TransactionFailed(str(exc))
 
-        # ── Commit idempotency only after a successful broadcast ─────────
         idempotency.commit(req.idempotency_key, txid)
 
     except BaseException:
-        # Any failure between reserve and commit must release the slot.
-        # commit() above replaces PENDING with the real txid; release() is a
-        # no-op on already-committed slots, so this is safe even on the
-        # success path if commit() somehow raised.
         idempotency.release(req.idempotency_key)
         raise
 
@@ -328,7 +348,8 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
 
     audit.record(
         "SEND_SUCCESS",
-        from_address=tron.address,
+        wallet=wallet.name,
+        from_address=wallet.address,
         to_address=req.to_address,
         amount=str(amount),
         txid=txid,
@@ -339,8 +360,8 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
     )
 
     log.info(
-        "[SEND] SUCCESS | txid=%s %s -> %s amount=%s USDT risk=%s elapsed=%.2fs",
-        txid, tron.address, req.to_address, amount, risk_level_str, elapsed,
+        "[SEND] SUCCESS | txid=%s wallet=%s %s -> %s amount=%s USDT risk=%s elapsed=%.2fs",
+        txid, wallet.name, wallet.address, req.to_address, amount, risk_level_str, elapsed,
     )
 
     metrics.tx_broadcast_total.labels(result="success").inc()
@@ -349,7 +370,8 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
 
     return SendResponse(
         txid=txid,
-        from_address=tron.address,
+        from_address=wallet.address,
+        wallet=wallet.name,
         to_address=req.to_address,
         amount=str(amount),
         idempotency_key=req.idempotency_key,
@@ -382,29 +404,36 @@ def _validate_tron_address(address: str) -> None:
 # --------------------------------------------------------------------------
 
 @router.get("/balance", response_model=BalanceResponse)
-def balance(request: Request, _: str = Depends(verify_api_key)):
+def balance(
+    request: Request,
+    wallet: str | None = Query(
+        default=None,
+        description="Wallet name (omit for auto-pick by max USDT)",
+        max_length=64,
+    ),
+    _: str = Depends(verify_api_key),
+):
     client_ip = client_address(request)
-    log.info("[BALANCE] Request from %s", client_ip)
+    log.info("[BALANCE] Request from %s | wallet=%s", client_ip, wallet or "<auto>")
 
-    trx = tron.get_trx_balance()
-    usdt = tron.get_usdt_balance()
-    res = tron.get_resource_summary()
+    w = _resolve_wallet(wallet)
+    trx = tron.get_trx_balance_for(w.address)
+    usdt = tron.get_usdt_balance_for(w.address)
+    res = tron.get_resource_summary_for(w.address)
 
     log.info(
-        "[BALANCE] address=%s TRX=%s USDT=%s energy=%d bw_free=%d bw_paid=%d staked=%d",
-        tron.address, trx, usdt,
+        "[BALANCE] wallet=%s address=%s TRX=%s USDT=%s energy=%d bw_free=%d bw_paid=%d staked=%d",
+        w.name, w.address, trx, usdt,
         res["energy_available"], res["bandwidth_free_available"],
         res["bandwidth_paid_available"], res["tron_power"],
     )
 
-    # Refresh Prometheus gauges — /balance is the natural refresh source for
-    # dashboards; /metrics scrapes then see fresh values without a separate
-    # TronGrid RPC.
     metrics.record_balances(trx, usdt)
     metrics.record_resource_snapshot(res)
 
     return BalanceResponse(
-        address=tron.address,
+        wallet=w.name,
+        address=w.address,
         trx=str(trx),
         usdt=str(usdt),
         energy_available=res["energy_available"],
@@ -412,6 +441,58 @@ def balance(request: Request, _: str = Depends(verify_api_key)):
         bandwidth_paid_available=res["bandwidth_paid_available"],
         tron_power_staked=res["tron_power"],
     )
+
+
+# --------------------------------------------------------------------------
+# GET /api/v1/wallets — list every configured wallet (multi-wallet awareness)
+# --------------------------------------------------------------------------
+
+@router.get("/wallets", response_model=WalletListResponse)
+def wallets_endpoint(request: Request, _: str = Depends(verify_api_key)):
+    """Return every wallet in the pool with live balances + the auto-pick
+    winner. Cost: N TRX-balance + N USDT-balance + N resource RPCs. For a
+    single wallet this is the same cost as /balance.
+
+    Wallets whose RPCs fail are still included, with empty/zero fields and
+    ``trx="error"``/``usdt="error"`` so the operator can see something is
+    wrong without /wallets itself returning 5xx."""
+    client_ip = client_address(request)
+    log.info("[WALLETS] Request from %s | count=%d", client_ip, wallets.count())
+
+    out: list[WalletSummary] = []
+    best_name: str | None = None
+    best_usdt: Decimal = Decimal(-1)
+    for w in wallets.all():
+        try:
+            trx = tron.get_trx_balance_for(w.address)
+            usdt = tron.get_usdt_balance_for(w.address)
+            res = tron.get_resource_summary_for(w.address)
+        except Exception as exc:
+            log.warning(
+                "/wallets: balance lookup failed for %s (%s): %s",
+                w.name, type(exc).__name__, exc,
+            )
+            out.append(WalletSummary(
+                wallet=w.name,
+                address=w.address,
+                trx="error",
+                usdt="error",
+            ))
+            continue
+        out.append(WalletSummary(
+            wallet=w.name,
+            address=w.address,
+            trx=str(trx),
+            usdt=str(usdt),
+            energy_available=res["energy_available"],
+            bandwidth_free_available=res["bandwidth_free_available"],
+            bandwidth_paid_available=res["bandwidth_paid_available"],
+        ))
+        if usdt > best_usdt:
+            best_name = w.name
+            best_usdt = usdt
+
+    return WalletListResponse(wallets=out, auto_pick=best_name)
 
 
 # --------------------------------------------------------------------------
@@ -451,10 +532,6 @@ def risk_endpoint(
 # GET /api/v1/health       — full readiness probe (auth + RPC)
 # --------------------------------------------------------------------------
 
-# --------------------------------------------------------------------------
-# GET /api/v1/metrics — Prometheus scrape endpoint
-# --------------------------------------------------------------------------
-
 @router.get("/metrics")
 def metrics_endpoint(_: str = Depends(verify_api_key)):
     """Prometheus text exposition.
@@ -465,7 +542,6 @@ def metrics_endpoint(_: str = Depends(verify_api_key)):
     does NO RPC calls; gauges are refreshed by the normal /balance,
     /health, and /send paths.
     """
-    # Uptime gauge is the one value that's always fresh and free.
     metrics.uptime_gauge.set(uptime())
     metrics.idempotency_store_size_gauge.set(idempotency.count())
     return Response(
@@ -507,25 +583,13 @@ def health(request: Request, _: str = Depends(verify_api_key)):
     log.info("[HEALTH] Request from %s", client_ip)
 
     node_ok = tron.check_connection()
-    res = tron.get_resource_summary() if node_ok else {
-        "energy_available": 0,
-        "bandwidth_free_available": 0,
-        "bandwidth_paid_available": 0,
-        "tron_power": 0,
-    }
-
     metrics.node_connected_gauge.set(1.0 if node_ok else 0.0)
-    if node_ok:
-        metrics.record_resource_snapshot(res)
 
     return HealthResponse(
-        address=tron.address,
         network=TRON_NETWORK,
         uptime_seconds=uptime(),
         shutdown_in_seconds=seconds_remaining(),
         node_connected=node_ok,
-        energy_available=res["energy_available"],
-        bandwidth_free_available=res["bandwidth_free_available"],
-        bandwidth_paid_available=res["bandwidth_paid_available"],
-        tron_power_staked=res["tron_power"],
+        wallet_count=wallets.count(),
+        wallet_names=wallets.names(),
     )

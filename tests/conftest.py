@@ -129,28 +129,38 @@ def base_url() -> str:
 
 @pytest.fixture()
 def mock_tron():
-    """Patch the tron singleton with predictable return values."""
+    """Patch the tron singleton with predictable return values.
+
+    In 1.4.0 the singleton went keyless (the old ``tron.address`` /
+    ``tron.priv_key`` / single-wallet methods are gone — see CHANGELOG).
+    The fixture now mocks the address-parameterised RPC methods AND
+    seeds the WalletPool with one wallet so existing /send tests
+    work unchanged. Tests that need multiple wallets override the pool
+    via ``wallets._override_for_tests([...])`` after the fixture runs.
+    """
     from skr_crypto.server.tron_client import tron
+    from skr_crypto.server.wallet import Wallet
+    from skr_crypto.server.wallet_pool import wallets as pool
 
     original_init = tron.init
     original_destroy = tron.destroy
 
     tron.init = MagicMock()
     tron.destroy = MagicMock()
-    tron.address = "TTestAddress1234567890123456789012"
-    tron.priv_key = MagicMock()
     tron.client = MagicMock()
     tron._usdt_contract = MagicMock()
 
-    tron.get_trx_balance = MagicMock(return_value=Decimal("100"))
-    tron.get_usdt_balance = MagicMock(return_value=Decimal("5000"))
-    tron.send_usdt = MagicMock(return_value="abc123txid")
+    # Address-parameterised reads — return the same balances regardless
+    # of which wallet address is passed. Tests that need divergent
+    # per-address balances override these with side_effect.
+    tron.get_trx_balance_for = MagicMock(return_value=Decimal("100"))
+    tron.get_usdt_balance_for = MagicMock(return_value=Decimal("5000"))
     tron.check_connection = MagicMock(return_value=True)
 
     tron.estimate_transfer_energy = MagicMock(return_value=None)
     tron.energy_price_sun = MagicMock(return_value=420)
     tron.compute_fee_limit_sun = MagicMock(return_value=30_000_000)
-    tron.get_resource_summary = MagicMock(return_value={
+    tron.get_resource_summary_for = MagicMock(return_value={
         "energy_available": 0,
         "energy_limit": 0,
         "bandwidth_free_available": 600,
@@ -158,29 +168,54 @@ def mock_tron():
         "tron_power": 0,
     })
 
-    # Risk-preflight defaults (added in v1.2). Make every check pass
-    # cleanly so existing /send tests keep working without explicit
-    # setup. Tests that actually exercise risk override these locally.
+    # Risk-preflight defaults: make every check pass cleanly so existing
+    # /send tests keep working without explicit setup. Tests that
+    # actually exercise risk override these locally.
     tron.client.get_account = MagicMock(return_value={
         "create_time": 1700000000_000,
     })
     tron.client.get_contract = MagicMock(side_effect=Exception("not a contract"))
-    # `tron._get_usdt_contract()` returns a contract mock whose
-    # `.functions.isBlackListed(addr)` returns False by default.
-    # Wire both the attribute and the method (risk module calls the
-    # method; the existing send tests poke the attribute directly).
     _usdt_mock = MagicMock()
     _usdt_mock.functions.isBlackListed = MagicMock(return_value=False)
     tron._usdt_contract = _usdt_mock
-    tron._get_usdt_contract = MagicMock(return_value=_usdt_mock)
+    tron.get_usdt_contract = MagicMock(return_value=_usdt_mock)
     tron.get_destination_info = MagicMock(return_value={
         "exists": True,
         "trx_balance": Decimal("1"),
         "usdt_balance": Decimal("100"),
     })
 
+    # ── Seed the WalletPool with one mock wallet ───────────────────────
+    # Backward-compat aliases: tests historically asserted on
+    # ``mock_tron.address`` and assigned mock side-effects via
+    # ``mock_tron.send_usdt = MagicMock(...)``. Keep both working in
+    # the multi-wallet world by proxying — the actual signing call
+    # site is ``wallet.send_usdt(client, contract, to, amount, ...)``;
+    # we route that into the legacy ``tron.send_usdt(to, amount, ...)``
+    # MagicMock so existing assertions on call_args still match.
+    test_address = "TTestAddress1234567890123456789012"
+    tron.address = test_address  # legacy read-only alias
+    tron.send_usdt = MagicMock(return_value="abc123txid")  # legacy mock target
+
+    fake_wallet = Wallet(
+        name="default",
+        address=test_address,
+        priv_key=MagicMock(),
+    )
+
+    # Proxy: drops the (client, contract) prefix so tests that assert
+    # ``mock_tron.send_usdt.assert_called_once_with(to, amount, fee_limit_sun=...)``
+    # match the actual recorded args.
+    def _send_proxy(_client, _contract, to_address, amount, *,
+                    fee_limit_sun=None):
+        return tron.send_usdt(to_address, amount, fee_limit_sun=fee_limit_sun)
+    fake_wallet.send_usdt = _send_proxy
+
+    pool._override_for_tests([fake_wallet])
+
     yield tron
 
+    pool._reset_for_tests()
     tron.init = original_init
     tron.destroy = original_destroy
 

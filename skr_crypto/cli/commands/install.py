@@ -58,13 +58,19 @@ DEFAULTS = {
     "op_field": "password",
     "keychain_service": "skr-crypto",
     "keychain_account": "treasury",
+    "keystore_file": "data/keystore.json",
 }
 
 KEY_PROVIDER_OPTIONS = [
-    ("env",       "PRIVATE_KEY_HEX from process env (containers, CI)"),
-    ("file",      "chmod-600 file at PRIVATE_KEY_FILE (VPS / systemd)"),
-    ("1password", "1Password CLI (op); operator-on-laptop"),
-    ("keychain",  "macOS Keychain (local dev)"),
+    # Order kept stable so existing wizard test numbering doesn't drift.
+    # encrypted_file is appended last; it's the recommended pick for
+    # Docker / multi-wallet but its position in the menu does not have
+    # to mirror the recommendation strength.
+    ("env",            "PRIVATE_KEY_HEX from process env (containers, CI)"),
+    ("file",           "chmod-600 file at PRIVATE_KEY_FILE (VPS / systemd)"),
+    ("1password",      "1Password CLI (op); operator-on-laptop"),
+    ("keychain",       "macOS Keychain (local dev)"),
+    ("encrypted_file", "AES-256-GCM keystore file + passphrase (multi-wallet, container-safe)"),
 ]
 NETWORK_OPTIONS = [
     ("mainnet", "production TRON"),
@@ -219,8 +225,16 @@ def _collect_settings(opts: dict, *, interactive: bool) -> dict:
     s["key_file"] = ""
     s["op_vault"] = s["op_item"] = s["op_field"] = ""
     s["keychain_service"] = s["keychain_account"] = ""
+    s["keystore_file"] = ""
 
-    if s["key_provider"] == "file":
+    if s["key_provider"] == "encrypted_file":
+        s["keystore_file"] = _resolve_string(
+            None, interactive,
+            label="Path to the AES-256-GCM keystore file (created on first start)",
+            default=DEFAULTS["keystore_file"],
+            step=f"[1.5/{n_steps}]",
+        )
+    elif s["key_provider"] == "file":
         s["key_file"] = _resolve_string(
             opts["key_file"], interactive,
             label="Path to the chmod-600 file with the hex private key",
@@ -452,6 +466,8 @@ def _env_values_from(s: dict, auth_token: str) -> dict[str, str]:
             values["KEYCHAIN_SERVICE"] = s["keychain_service"]
         if s["keychain_account"]:
             values["KEYCHAIN_ACCOUNT"] = s["keychain_account"]
+    if s["key_provider"] == "encrypted_file" and s.get("keystore_file"):
+        values["KEYSTORE_FILE"] = s["keystore_file"]
     return values
 
 
@@ -480,6 +496,20 @@ def _print_next_steps(s: dict, *, gen_key_done: bool) -> None:
             )
         else:
             output.info("     (Done — key already in macOS Keychain.)")
+    elif s["key_provider"] == "encrypted_file":
+        kf = s.get("keystore_file") or DEFAULTS["keystore_file"]
+        output.info(
+            f"     Initialise the keystore: [italic]skr-crypto wallet encrypt "
+            f"-o {kf}[/italic]"
+        )
+        output.info(
+            "     Then add wallets via [italic]skr-crypto wallet add NAME[/italic] "
+            "or [italic]wallet generate NAME[/italic]."
+        )
+        output.info(
+            "     Provide the passphrase via KEY_PASSPHRASE / KEY_PASSPHRASE_FILE "
+            "in .env, or via TTY when running."
+        )
 
     if not s["trongrid_api_key"]:
         output.info("  2. Set TRONGRID_API_KEY in .env (highly recommended).")
