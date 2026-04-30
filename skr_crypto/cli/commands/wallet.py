@@ -54,26 +54,61 @@ def group() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _install_env(ctx: click.Context) -> tuple[Path, dict[str, str]]:
-    """Return (install_dir, parsed .env). Raises NotInstalledError."""
-    install_dir = config.require_installed(ctx.obj.get("install_dir"))
-    env = config.read_env_file(install_dir / ".env")
-    return install_dir, env
+def _install_env(ctx: click.Context) -> tuple[Path | None, dict[str, str]]:
+    """Return (install_dir, env-as-dict).
+
+    Two resolution paths:
+
+      1. Standard: there's an install dir at ``$SKR_CRYPTO_HOME`` (or
+         the dir passed via ``--dir``), with a ``.env`` file inside.
+         We parse the .env into the dict.
+      2. Docker-bootstrap fallback: no install dir is found. We build
+         a minimal dict from the current process environment. This is
+         the path scripts/bootstrap-docker.sh takes — it runs the CLI
+         inside an ephemeral container that has never seen
+         ``skr-crypto install``, but does have ``KEYSTORE_FILE``,
+         ``KEY_PASSPHRASE``, etc. set as env vars by docker compose.
+    """
+    from skr_crypto.cli.exceptions import NotInstalledError
+    try:
+        install_dir = config.require_installed(ctx.obj.get("install_dir"))
+        env = config.read_env_file(install_dir / ".env")
+        return install_dir, env
+    except NotInstalledError:
+        # Container / scripted path — synthesise from process env.
+        env = {
+            k: os.environ.get(k, "")
+            for k in (
+                "KEY_PROVIDER", "KEYSTORE_FILE",
+                "KEY_PASSPHRASE", "KEY_PASSPHRASE_FILE", "WALLETS",
+                "PRIVATE_KEY_FILE", "OP_VAULT", "OP_ITEM", "OP_FIELD",
+                "KEYCHAIN_SERVICE", "KEYCHAIN_ACCOUNT",
+                "AUTH_TOKEN", "SERVER_HOST", "SERVER_PORT",
+                "IDEMPOTENCY_DB_PATH", "WEBHOOK_SIGNING_SECRET",
+            )
+        }
+        return None, env
 
 
 def _provider(env: dict[str, str]) -> str:
     return env.get("KEY_PROVIDER", "1password").strip().lower()
 
 
-def _keystore_path(install_dir: Path, env: dict[str, str]) -> Path:
+def _keystore_path(install_dir: Path | None, env: dict[str, str]) -> Path:
     raw = env.get("KEYSTORE_FILE", "")
     if not raw:
         raise SkrCryptoError(
-            "KEYSTORE_FILE is not set in .env — KEY_PROVIDER=encrypted_file "
+            "KEYSTORE_FILE is not set — KEY_PROVIDER=encrypted_file "
             "requires a path. Run `skr-crypto wallet encrypt` to set up."
         )
     p = Path(raw)
     if not p.is_absolute():
+        if install_dir is None:
+            raise SkrCryptoError(
+                f"KEYSTORE_FILE={raw!r} is a relative path, but no install "
+                "dir is configured (no $SKR_CRYPTO_HOME, no `skr-crypto "
+                "install` was run). Use an absolute path."
+            )
         p = install_dir / p
     return p
 
@@ -531,25 +566,55 @@ def encrypt_cmd(
 
     and restart. Subsequent ``skr-crypto wallet add`` calls write here.
     """
-    install_dir = config.require_installed(ctx.obj.get("install_dir"))
     ks = _import_keystore_module()
 
-    out_path = Path(output_path) if output_path else (install_dir / "data" / "keystore.json")
+    # If `-o` is given as an absolute path, we don't need the install dir.
+    # This is the Docker / scripts/bootstrap-docker.sh path: the keystore
+    # path is explicit and the container doesn't carry a full skr-crypto
+    # install layout. For interactive use we still default to
+    # <install_dir>/data/keystore.json — matching the legacy behaviour.
+    if output_path and Path(output_path).is_absolute():
+        out_path = Path(output_path)
+    else:
+        from skr_crypto.cli.exceptions import NotInstalledError
+        try:
+            install_dir = config.require_installed(ctx.obj.get("install_dir"))
+        except NotInstalledError:
+            raise SkrCryptoError(
+                "no install dir found at $SKR_CRYPTO_HOME. Pass an "
+                "absolute path via -o /path/to/keystore.json, or run "
+                "`skr-crypto install` first."
+            )
+        out_path = Path(output_path) if output_path else (install_dir / "data" / "keystore.json")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists() and not force:
         raise SkrCryptoError(
             f"keystore already exists at {out_path}. Pass --force to overwrite."
         )
 
-    # Passphrase: ask twice for confirmation. We never echo and never
-    # show even the length back to the operator.
-    pw1 = getpass.getpass("New keystore passphrase (will not echo): ")
-    if not pw1:
-        raise SkrCryptoError("empty passphrase")
-    pw2 = getpass.getpass("Confirm passphrase: ")
-    if pw1 != pw2:
-        raise SkrCryptoError("passphrases do not match — aborting")
-    passphrase = pw1.encode("utf-8")
+    # Passphrase resolution:
+    #
+    #   - If `KEY_PASSPHRASE` is set in the environment, use it directly.
+    #     This is the non-interactive bootstrap path (Docker compose,
+    #     scripts/bootstrap-docker.sh, CI). The operator's intent is
+    #     already encoded in the env var; double-confirm would just
+    #     hang on a non-TTY stdin.
+    #   - Otherwise, prompt twice via `getpass`. Standard interactive
+    #     flow.
+    #
+    # We never echo. We never show even the length back to the operator.
+    env_pw = os.environ.get("KEY_PASSPHRASE", "")
+    if env_pw:
+        output.info("Using KEY_PASSPHRASE from environment (non-interactive).")
+        passphrase = env_pw.encode("utf-8")
+    else:
+        pw1 = getpass.getpass("New keystore passphrase (will not echo): ")
+        if not pw1:
+            raise SkrCryptoError("empty passphrase")
+        pw2 = getpass.getpass("Confirm passphrase: ")
+        if pw1 != pw2:
+            raise SkrCryptoError("passphrases do not match — aborting")
+        passphrase = pw1.encode("utf-8")
 
     # Resolve source key (optional).
     hex_key: str | None = None

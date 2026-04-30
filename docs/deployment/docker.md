@@ -77,6 +77,47 @@ services:
 
 ## End-to-end first deploy
 
+### One-command bootstrap (recommended)
+
+```bash
+git clone https://github.com/vampir15551/skr-crypto.git
+cd skr-crypto
+./scripts/bootstrap-docker.sh
+```
+
+The bootstrap script:
+
+1. **Pre-flight** — verifies Docker daemon is running; refuses to
+   overwrite an existing `.env` unless `BOOTSTRAP_FORCE=1`.
+2. **Secret generation** — `AUTH_TOKEN`, `KEY_PASSPHRASE`,
+   `WEBHOOK_SIGNING_SECRET` via `openssl rand -hex 32`.
+3. **`.env` write** — chmod-600, with sane local-dev defaults
+   (encrypted_file backend, mainnet, audit log + idempotency DB
+   on the bind-mounted `./data` volume).
+4. **Image build** — `docker compose build skr-crypto`. ~1-2 min
+   on a fresh machine, ~5s with cache.
+5. **Keystore init** — runs `skr-crypto wallet encrypt` inside an
+   ephemeral container (no Python needed on the host). Uses the
+   `KEY_PASSPHRASE` env var to skip the interactive double-confirm.
+6. **Wallet generation** — `skr-crypto wallet generate main` (also
+   in-container).
+7. **Service start** — `docker compose up -d`, with healthcheck.
+8. **Health probe wait** — polls `/health/live` for up to 60 s.
+9. **Summary** — prints the UI URL, the AUTH_TOKEN to paste, the
+   newly-created wallet's address, and common ops commands.
+
+Re-run with `BOOTSTRAP_FORCE=1` to wipe `.env` + `./data/` and start
+over.
+
+After the script finishes:
+
+- **UI**: <http://127.0.0.1:8000/ui/> — paste the printed token.
+- **Wallet `main`**: fund the printed address with ≥50 TRX (for
+  fees) + the USDT you want to send.
+- **First /send**: copy the curl example from the script's summary.
+
+### Manual (for environments where you can't run the script)
+
 ```bash
 git clone https://github.com/vampir15551/skr-crypto.git
 cd skr-crypto

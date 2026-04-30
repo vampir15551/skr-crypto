@@ -14,9 +14,11 @@ __pycache__
 !.env.example
 tests/
 scripts/
-README.md
 Makefile
 *.md
+# README.md is needed for the wheel build (pyproject.toml references it
+# via `readme = "README.md"`).
+!README.md
 # Keep requirements.txt and requirements.lock — Dockerfile picks one
 !requirements.txt
 !requirements.lock

@@ -94,7 +94,31 @@ python3.12 -m venv venv && source venv/bin/activate
 pip install -e '.[server,dev,docs]'
 ```
 
-### Docker
+### Docker — one-command bootstrap (recommended for local testing)
+
+```bash
+git clone https://github.com/vampir15551/skr-crypto.git
+cd skr-crypto
+./scripts/bootstrap-docker.sh
+```
+
+That's it. The script:
+
+1. Verifies Docker is running.
+2. Generates a fresh `AUTH_TOKEN`, `KEY_PASSPHRASE`, and `WEBHOOK_SIGNING_SECRET`.
+3. Builds the image and uses it (no Python on the host needed) to
+   initialise an encrypted keystore + generate a wallet named `main`.
+4. Writes `.env` (chmod 600) with sane local-dev defaults.
+5. Starts the service via `docker compose up -d`.
+6. Waits for `/health/live`, then prints:
+   - The **Operator UI URL** (`http://127.0.0.1:8000/ui/`)
+   - Your `AUTH_TOKEN` (paste it at the UI prompt)
+   - The **address** of wallet `main` (fund it with TRX + USDT to test)
+   - Common `docker compose` commands for daily ops
+
+Re-run with `BOOTSTRAP_FORCE=1` to wipe `.env`/`data/` and start over.
+
+### Docker — manual
 
 ```bash
 git clone git@github.com:vampir15551/skr-crypto.git && cd skr-crypto

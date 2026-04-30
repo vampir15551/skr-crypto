@@ -10,4 +10,4 @@ heading. See ``RELEASE.md``.
 """
 from __future__ import annotations
 
-__version__: str = "1.8.0"
+__version__: str = "1.8.1"

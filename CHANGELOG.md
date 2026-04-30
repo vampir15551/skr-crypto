@@ -9,6 +9,53 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.8.1] — 2026-04-30
+
+The "git clone + one command + service is up" release. Adds
+`scripts/bootstrap-docker.sh` and the small CLI patches it needs to
+run non-interactively inside an ephemeral container.
+
+### Added
+
+- **`scripts/bootstrap-docker.sh`** — zero-to-running-service in one
+  command from a fresh git clone. Verifies Docker, generates secrets
+  (AUTH_TOKEN, KEY_PASSPHRASE, WEBHOOK_SIGNING_SECRET), writes
+  chmod-600 `.env`, builds the image, initialises an encrypted
+  keystore + first wallet *inside the image* (no Python on the host
+  required), starts the service, waits for `/health/live`, and prints
+  the UI URL + token + first-funded-address summary.
+  Re-run with `BOOTSTRAP_FORCE=1` to wipe and re-init.
+
+### Changed
+
+- **`skr-crypto wallet encrypt`** now honours `KEY_PASSPHRASE` from
+  the environment when set, skipping the interactive double-confirm
+  prompt. This is the non-interactive path that
+  `scripts/bootstrap-docker.sh` and CI pipelines take. Interactive
+  use is unchanged.
+- **`skr-crypto wallet encrypt`** with an absolute `-o /path` no
+  longer requires a `skr-crypto install` install-dir (the path is
+  explicit, install-dir was redundant). Relative `-o` still requires
+  the install dir.
+- **`skr-crypto wallet`** CLI helpers (`_install_env`, `_keystore_path`)
+  fall back to the process environment when no install dir is found.
+  This lets `skr-crypto wallet generate / add / remove / rename`
+  work inside `docker compose run --rm` containers that don't carry
+  a full install layout.
+- **`.dockerignore`** — un-excludes `README.md` (the wheel build
+  references it via `pyproject.toml`'s `readme = "README.md"`).
+- **`README.md`** + `docs/deployment/docker.md` document the new
+  bootstrap script as the recommended Docker path.
+
+### Operator quickstart now reads
+
+```bash
+git clone https://github.com/vampir15551/skr-crypto.git
+cd skr-crypto
+./scripts/bootstrap-docker.sh
+# → http://127.0.0.1:8000/ui/  (token printed in the summary)
+```
+
 ## [1.8.0] — 2026-04-30
 
 The "compliance/finance can see things without shell access" release.
