@@ -105,6 +105,14 @@
          <lastmod>2026-04-30</lastmod>
     </url>
     <url>
+         <loc>https://vampir15551.github.io/skr-crypto/adr/0010-receipt-poller/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://vampir15551.github.io/skr-crypto/adr/0011-opt-in-webhooks/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/</loc>
          <lastmod>2026-04-30</lastmod>
     </url>
