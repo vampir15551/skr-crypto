@@ -4,10 +4,12 @@
 
 [**📚 Full documentation**](https://vampir15551.github.io/skr-crypto/) &nbsp;·&nbsp; [Install](#install) &nbsp;·&nbsp; [Quick start](#quick-start) &nbsp;·&nbsp; [Architecture](https://vampir15551.github.io/skr-crypto/architecture/) &nbsp;·&nbsp; [Security](https://vampir15551.github.io/skr-crypto/security/) &nbsp;·&nbsp; [Changelog](CHANGELOG.md)
 
-![version](https://img.shields.io/badge/version-1.4.0-informational)
-![python](https://img.shields.io/badge/python-3.11%2B-blue)
-![license](https://img.shields.io/badge/license-MIT-green)
-![signed commits](https://img.shields.io/badge/commits-signed-success)
+[![tests](https://github.com/vampir15551/skr-crypto/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/vampir15551/skr-crypto/actions/workflows/test.yml)
+[![docs](https://github.com/vampir15551/skr-crypto/actions/workflows/docs.yml/badge.svg?branch=main)](https://vampir15551.github.io/skr-crypto/)
+[![release](https://img.shields.io/github/v/release/vampir15551/skr-crypto?label=release&color=informational)](https://github.com/vampir15551/skr-crypto/releases/latest)
+[![python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![signed commits](https://img.shields.io/badge/commits-signed-success)](https://github.com/vampir15551/skr-crypto/commits/main)
 ![status](https://img.shields.io/badge/status-beta-orange)
 
 ---
