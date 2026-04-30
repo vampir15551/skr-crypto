@@ -1,0 +1,2750 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="USDT TRC-20 treasury — synchronous payouts service plus operator CLI in one package.">
+      
+      
+      
+        <link rel="canonical" href="https://vampir15551.github.io/skr-crypto/changelog/">
+      
+      
+        <link rel="prev" href="../adr/0006-encrypted-keystore/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Changelog - SKR Crypto</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#changelog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="SKR Crypto" class="md-header__button md-logo" aria-label="SKR Crypto" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SKR Crypto
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-orange" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/vampir15551/skr-crypto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="SKR Crypto" class="md-nav__button md-logo" aria-label="SKR Crypto" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    SKR Crypto
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/vampir15551/skr-crypto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Quick start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/local-mac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local on Mac
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/systemd-vps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VPS + systemd
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install wizard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multi-wallet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-wallet pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../key-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Key providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keystore-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Encrypted keystore format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../risk-preflight/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk preflight
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../idempotency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Idempotency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit-log/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit log
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../commands/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/wallet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    wallet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/inspect/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inspect
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/backups/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration vars
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring & metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration-1.4/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrating to 1.4
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releasing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../adr/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADRs
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADRs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0001-sync-only-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 — Sync-only architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0002-pluggable-key-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 — Pluggable key providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0003-msk-day-reconciliation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 — MSK-day reconciliation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0004-audit-hard-error/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 — Audit hard-error
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0005-multi-wallet-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 — Multi-wallet pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0006-encrypted-keystore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 — Encrypted keystore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [Unreleased]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#130-2026-04-29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.3.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.3.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#120-2026-04-29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.2.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.2.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-2026-04-29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.1.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.1.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-2026-04-29_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.1.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.1.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#100-2026-04-29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.0.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.0.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-2026-04-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.0] — 2026-04-28
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.0] — 2026-04-28">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [Unreleased]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#130-2026-04-29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.3.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.3.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#120-2026-04-29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.2.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.2.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-2026-04-29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.1.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.1.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-2026-04-29_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.1.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.1.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#100-2026-04-29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [1.0.0] — 2026-04-29
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[1.0.0] — 2026-04-29">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-2026-04-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.1.0] — 2026-04-28
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.1.0] — 2026-04-28">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/vampir15551/skr-crypto/edit/main/docs/changelog.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
+<p>All notable changes follow <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>
+loosely and <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<p>The CI gate enforces that any code-touching PR adds a line under
+<code>[Unreleased]</code>. Don't rewrite past sections — only append, then on a
+release move <code>[Unreleased]</code> → <code>[X.Y.Z] — YYYY-MM-DD</code>.</p>
+<h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<h2 id="130-2026-04-29">[1.3.0] — 2026-04-29<a class="headerlink" href="#130-2026-04-29" title="Permanent link">#</a></h2>
+<p>The "real AML" release. Risk preflight gains an OFAC SDN sanctions
+check (always-on, zero rate limit, local list) and an opt-in
+MistTrack AML score lookup. TronScan goes from opt-in to default-on,
+matching the existing Tier 1 TronGrid checks. Every /send now
+records the recipient's risk verdict in the audit and success log.</p>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">#</a></h3>
+<ul>
+<li><strong><code>skr_crypto.server.sanctions</code></strong> — OFAC SDN sanctions list
+  manager. Downloads the TRX-tagged list from the community-curated
+  <code>0xB10C/ofac-sanctioned-digital-currency-addresses</code> repo at
+  process startup, caches in memory + on disk
+  (<code>$SKR_CRYPTO_HOME/data/ofac-sdn-trx.txt</code>), falls back to the
+  cache if the URL is unreachable. Zero rate limit because checks
+  are local set-membership.</li>
+<li><strong>New risk check <code>sanctions</code></strong> (Tier 1, always on) — flags any
+  recipient on the OFAC SDN list as HIGH severity. Catches the most
+  legally consequential class of address: sending USDT to an
+  OFAC-listed entity may violate US sanctions regardless of whether
+  the transaction lands on-chain.</li>
+<li><strong>New risk check <code>external_misttrack</code></strong> (Tier 2, opt-in via
+  <code>MISTTRACK_API_KEY</code>) — calls SlowMist's MistTrack
+  <code>/v1/risk_score</code> endpoint for real AML attribution
+  (mixers, scam interaction, hacks). Score ≥ 60 or any
+  high-severity tag → HIGH. Without an API key the check
+  cleanly SKIPs.</li>
+<li><strong>Risk level in every /send audit + log line.</strong> <code>SEND_SUCCESS</code>
+  audit details now include <code>risk=&lt;low|medium|high|skipped&gt;</code>;
+  <code>[SEND] SUCCESS</code> log line surfaces the same. Forensic search
+  for "all transfers that risk-flagged MEDIUM" is now one
+  <code>grep</code> away.</li>
+<li><strong>New env vars</strong> in <code>.env</code>:</li>
+<li><code>SANCTIONS_LIST_URL</code> — override source URL for OFAC list</li>
+<li><code>SANCTIONS_LIST_REFRESH</code> — set <code>false</code> for offline /
+    air-gapped deploys (use cached list only)</li>
+<li><code>MISTTRACK_API_KEY</code> — opt in to the MistTrack tier</li>
+<li><strong>Lifespan now refreshes sanctions list</strong> on every server boot
+  (~1-2s, best-effort). Logged as <code>[SANCTIONS] loaded N TRX
+  addresses from &lt;url&gt;</code>.</li>
+</ul>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
+<ul>
+<li><strong><code>RISK_USE_EXTERNAL</code> defaults to <code>true</code>.</strong> New installs and
+  existing ones that don't set the variable will now run TronScan
+  on every /send (and <code>skr-crypto risk</code>). Adds ~300ms per /send
+  but catches community-tagged scams. Set <code>RISK_USE_EXTERNAL=false</code>
+  in <code>.env</code> to revert to TronGrid-only.</li>
+<li>The risk module now reports <strong>eight</strong> distinct check slots:
+  validity, burn_address, activation, smart_contract,
+  usdt_blacklist, <strong>sanctions</strong>, balance, external_tronscan,
+  <strong>external_misttrack</strong> (last two only when <code>external=True</code>).</li>
+</ul>
+<h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">#</a></h3>
+<ul>
+<li>The OFAC SDN check is the most important addition since the
+  Tether blacklist check in 1.2.0. Combined, /send now refuses on
+  three real classes of dangerous recipient (Tether-frozen,
+  OFAC-sanctioned, smart-contract destinations) before burning a
+  single satoshi of fee_limit.</li>
+<li>Audit + scans refreshed for this release; bandit 0 high (gate
+  level), pip-audit 0 known vulnerabilities.</li>
+</ul>
+<h2 id="120-2026-04-29">[1.2.0] — 2026-04-29<a class="headerlink" href="#120-2026-04-29" title="Permanent link">#</a></h2>
+<p>The "don't burn money on doomed broadcasts" release. Adds
+two-tier wallet-risk preflight, a standalone risk endpoint, and
+extends the install wizard with numbered prompts and per-provider
+follow-ups (the latter previously rolled into the [Unreleased]
+section above).</p>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Wallet-risk preflight.</strong> New module <code>skr_crypto.server.risk</code>
+  runs five local TRON checks against any recipient address:
+  validity, known-burn pattern (TRON null + zero-body fallback),
+  on-chain activation, smart-contract destination detection, and
+  the <strong>Tether USDT contract <code>isBlackListed</code></strong> call. Plus an
+  optional Tier-2 TronScan reputation lookup behind
+  <code>--external</code> / <code>RISK_USE_EXTERNAL=true</code>.</li>
+<li><strong><code>GET /api/v1/risk/{address}</code></strong> — read-only endpoint that
+  returns a JSON report with the verdict (<code>low</code>/<code>medium</code>/<code>high</code>/
+  <code>invalid</code>), per-check breakdown, and a balance/activity summary.
+  Same logic the /send preflight uses.</li>
+<li><strong><code>POST /api/v1/send</code> preflight blocking.</strong> Before reserving the
+  idempotency slot, /send now runs the risk assessment and refuses
+  with <strong>HTTP 400 <code>RISK_TOO_HIGH</code></strong> + audit <code>SEND_REJECTED
+  result=risk_too_high</code> when the level meets <code>RISK_BLOCK_LEVEL</code>.
+  Catches Tether-blacklisted recipients and contract destinations
+  that would silently revert and burn fee_limit on-chain. The full
+  report is attached to the error response so the caller sees
+  exactly which checks fired.</li>
+<li><strong><code>skr-crypto risk &lt;address&gt;</code></strong> CLI command. Calls the endpoint,
+  prints verdict + per-check table, exits 0/10/11/12 by level for
+  shell-pipeline use.</li>
+<li><strong>New env vars</strong> in <code>.env</code>:</li>
+<li><code>RISK_BLOCK_LEVEL</code> — <code>high</code> (default) / <code>medium</code> / <code>none</code></li>
+<li><code>RISK_USE_EXTERNAL</code> — <code>false</code> (default) / <code>true</code></li>
+<li><strong>Numbered wizard prompts.</strong> <code>skr-crypto install</code> interactive
+  mode now uses <code>ask_choice_numbered</code> and <code>ask_yes_no</code> helpers —
+  every multi-choice prompt shows <code>1) … 2) … 3) …</code> with the
+  default marked. Operators can type the number, the value name
+  (<code>env</code>, <code>mainnet</code>), or hit Enter for the default.</li>
+<li><strong>Per-provider follow-up prompts</strong> in install. Picking
+  <code>KEY_PROVIDER=file</code> immediately asks <code>PRIVATE_KEY_FILE</code>;
+  <code>1password</code> asks vault/item/field; <code>keychain</code> asks
+  service/account.</li>
+<li><strong><code>--advanced</code> flag</strong> for <code>install</code> exposes prompts for
+  <code>MIN_TRX_RESERVE</code>, <code>MAX_ENERGY_BURN_TRX</code>, <code>SHUTDOWN_TIMEOUT</code>,
+  <code>RATE_LIMIT_MAX</code>, <code>RATE_LIMIT_WINDOW</code>. Hidden behind a yes/no
+  toggle in interactive mode so first-time installs stay short.</li>
+<li><strong>New install flags</strong> for non-interactive deploys: <code>--key-file</code>,
+  <code>--op-vault</code>, <code>--op-item</code>, <code>--op-field</code>, <code>--keychain-service</code>,
+  <code>--keychain-account</code>, <code>--advanced</code>.</li>
+<li><strong><code>tx_rejected_total{reason="risk_too_high"}</code></strong> Prometheus
+  counter — fires every time risk preflight blocks a /send.</li>
+</ul>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">#</a></h3>
+<ul>
+<li><code>tests/conftest.py</code> <code>mock_tron</code> fixture now sets risk-clean
+  defaults so existing /send tests don't have to opt out of the
+  new gate. Tests that exercise risk specifically override
+  locally.</li>
+<li><code>output.ask_choice</code> (free-text constrained prompt) preserved
+  but new prompts should prefer <code>ask_choice_numbered</code>.</li>
+</ul>
+<h3 id="security_1">Security<a class="headerlink" href="#security_1" title="Permanent link">#</a></h3>
+<ul>
+<li>The <code>usdt_blacklist</code> check is the most operationally valuable
+  addition: it catches a real, reproducible class of "broadcast
+  succeeded but on-chain transfer reverted, fee_limit was burned"
+  failures that operators have hit IRL. With
+  <code>RISK_BLOCK_LEVEL=high</code> (default), those addresses are now
+  refused before broadcast.</li>
+<li>Audit + scans refreshed for this release; bandit 0 high (gate
+  level), pip-audit 0 known vulnerabilities.</li>
+</ul>
+<h2 id="110-2026-04-29">[1.1.0] — 2026-04-29<a class="headerlink" href="#110-2026-04-29" title="Permanent link">#</a></h2>
+<p>now uses <code>ask_choice_numbered</code> and <code>ask_yes_no</code> helpers — every
+  multi-choice prompt shows <code>1) … 2) … 3) …</code> with the default
+  marked. Operators can type the number, the value name (<code>env</code>,
+  <code>mainnet</code>), or just hit Enter for the default. Out-of-range or
+  non-digit input reprompts cleanly.
+- <strong>Per-provider follow-up prompts.</strong> After picking a <code>KEY_PROVIDER</code>
+  the wizard immediately asks for the relevant extras: <code>file</code> →
+  <code>PRIVATE_KEY_FILE</code>; <code>1password</code> → <code>OP_VAULT</code> + <code>OP_ITEM</code> +
+  <code>OP_FIELD</code>; <code>keychain</code> → <code>KEYCHAIN_SERVICE</code> + <code>KEYCHAIN_ACCOUNT</code>.
+  Closes the gap where you'd pick <code>file</code> and then have to dig into
+  <code>skr-crypto config edit</code> to set the path.
+- <strong><code>--advanced</code> flag (and prompt).</strong> Opens a tier-2 set of prompts
+  for <code>MIN_TRX_RESERVE</code>, <code>MAX_ENERGY_BURN_TRX</code>, <code>SHUTDOWN_TIMEOUT</code>,
+  <code>RATE_LIMIT_MAX</code>, <code>RATE_LIMIT_WINDOW</code>. Hidden behind a yes/no
+  toggle in interactive mode so first-time installs stay short.
+- <strong>New install flags</strong> for non-interactive deploys:
+  <code>--key-file</code>, <code>--op-vault</code>, <code>--op-item</code>, <code>--op-field</code>,
+  <code>--keychain-service</code>, <code>--keychain-account</code>, <code>--advanced</code>.
+- The wizard's "Next steps" output now branches on the chosen
+  <code>KEY_PROVIDER</code> — different hint per backend, e.g.
+  <code>op signin</code> reminder for 1password, exact <code>keygen --write-to file
+  --path</code> line for the file backend.</p>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">#</a></h3>
+<ul>
+<li><code>output.ask_choice</code> (free-text constrained prompt) is preserved
+  but new prompts should prefer <code>ask_choice_numbered</code> for ergonomics.</li>
+<li>Install tests rewritten to feed numbered answers; 18 scenarios
+  cover env / file / 1password / keychain wizard paths plus
+  invalid-input reprompts and the <code>--advanced</code> flow.</li>
+</ul>
+<h2 id="110-2026-04-29_1">[1.1.0] — 2026-04-29<a class="headerlink" href="#110-2026-04-29_1" title="Permanent link">#</a></h2>
+<p>Operator-experience release: <code>skr-crypto install</code> is now a real
+wizard with full automation flags, the Cloudflare tunnel is a
+first-class setting in <code>.env</code> (no more env-var dance), and tab
+completion for bash / zsh / fish ships with the package.</p>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">#</a></h3>
+<ul>
+<li><strong><code>skr-crypto install</code> wizard.</strong> Interactive by default when STDIN
+  is a TTY; falls through to defaults under <code>--yes</code> for automation.
+  Every prompt has an explicit flag — combine them freely:
+  <code>--key-provider</code>, <code>--network</code>, <code>--trongrid-api-key</code>, <code>--bind-host</code>,
+  <code>--bind-port</code>, <code>--tunnel/--no-tunnel</code>, <code>--gen-key</code>. Force the
+  wizard with <code>--interactive</code>. Pass <code>--force</code> to wipe an existing
+  install (with confirmation in interactive mode).</li>
+<li><strong><code>TUNNEL_ENABLED</code> in <code>.env</code>.</strong> First-class setting written by
+  <code>install</code>. <code>run.sh</code> reads it (in addition to the <code>NO_TUNNEL=1</code>
+  override env var) and starts the Cloudflare quick-tunnel
+  accordingly. No more "I forgot to export NO_TUNNEL".</li>
+<li><strong><code>--gen-key</code> flag on install.</strong> Chains into <code>skr-crypto keygen</code>
+  immediately after writing <code>.env</code>. The interactive wizard also asks
+  about it explicitly.</li>
+<li><strong><code>skr-crypto completion bash|zsh|fish</code>.</strong> Prints a Click-generated
+  shell-completion script. <code>skr-crypto completion zsh &gt;&gt; ~/.zshrc</code>
+  and tab-complete works for every command, flag, and option.</li>
+<li><strong><code>-q, --quiet</code> root flag.</strong> Suppresses informational and success
+  lines on stderr. Errors and warnings still print. Useful for CI /
+  automation where you only care about the exit code.</li>
+<li><strong><code>output.ask</code> / <code>output.ask_choice</code></strong> helpers for prompts that
+  honour TTY detection and EOF cleanly.</li>
+</ul>
+<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">#</a></h3>
+<ul>
+<li><strong><code>install</code> no longer takes <code>--from-path</code>, <code>--no-deps</code>, <code>--git-url</code>,
+  <code>--ref</code></strong> — these were removed in 1.0.0 but the help text still
+  hinted at them in places. Stripped completely.</li>
+<li>The wizard prints provider-specific next-steps after install
+  (different hint for <code>env</code> vs <code>file</code> vs <code>1password</code> vs <code>keychain</code>).</li>
+<li><code>run.sh</code> now reads <code>TUNNEL_ENABLED</code> from <code>.env</code> before deciding
+  whether to spawn <code>cloudflared</code>. Existing <code>NO_TUNNEL=1</code> env var is
+  still honoured as an emergency override.</li>
+</ul>
+<h3 id="security_2">Security<a class="headerlink" href="#security_2" title="Permanent link">#</a></h3>
+<ul>
+<li>No new findings. <code>bandit</code> 0 high (gate level), <code>pip-audit</code> 0 known
+  vulnerabilities. Reports under <code>audits/bandit-2026-04-29.txt</code> and
+  <code>audits/pip-audit-2026-04-29.json</code> refreshed for this release.</li>
+</ul>
+<h2 id="100-2026-04-29">[1.0.0] — 2026-04-29<a class="headerlink" href="#100-2026-04-29" title="Permanent link">#</a></h2>
+<p>This release <strong>merges the previously-separate <code>skr-crypto</code> (CLI) and
+<code>skr_crypto-payouts</code> (service) repositories into a single Python
+package</strong>. One install gives you both binaries, versioning and CI
+collapse into one pipeline, and the on-disk layout simplifies
+significantly. The old <code>skr_crypto-payouts</code> repository has been
+archived; all subsequent work happens here.</p>
+<h3 id="breaking-changes">Breaking changes<a class="headerlink" href="#breaking-changes" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Single package, two entry points.</strong> <code>pip install skr-crypto[server]</code>
+  installs both <code>skr-crypto</code> (CLI) and <code>skr-crypto-server</code> (service).
+  <code>pip install skr-crypto</code> (no extra) installs the CLI alone — useful
+  on operator laptops that only manage a remote install. There is no
+  separate service repository to clone.</li>
+<li><strong><code>install</code> no longer clones.</strong> <code>skr-crypto install</code> now writes
+  <code>.env</code> + creates <code>data/</code> only; it does not run <code>git clone</code> or build a
+  venv. The service code is part of the same package. Flags
+  <code>--git-url</code>, <code>--ref</code>, <code>--from-path</code>, <code>--no-deps</code>, <code>--interactive</code> are
+  removed; only <code>--force</code> remains.</li>
+<li><strong><code>update</code> no longer pulls.</strong> <code>skr-crypto update</code> now points at the
+  latest GitHub Release wheel and emits the <code>pip install -U …</code>
+  command. The CLI does not auto-upgrade the venv it lives in.</li>
+<li><strong><code>require_installed</code> accepts <code>.env</code> only.</strong> Previously checked for
+  <code>app/</code> too; that directory no longer exists in installs. Backwards-
+  compat: existing 0.x installs that have <code>app/</code> still work.</li>
+<li><strong>systemd unit renamed</strong> <code>payouts.service</code> → <code>skr-crypto.service</code>.
+  The lifecycle commands fall back to the legacy name if a unit
+  matching it is found, so old deploys keep working.</li>
+<li><strong>No PyPI publishing.</strong> Distribution is private — wheels are
+  attached to GitHub Releases. <code>release.yml</code> builds + signs +
+  attaches <code>SHA256SUMS.txt</code> alongside the wheel and sdist.</li>
+</ul>
+<h3 id="added_3">Added<a class="headerlink" href="#added_3" title="Permanent link">#</a></h3>
+<ul>
+<li><strong><code>skr-crypto keygen</code></strong> — generate a fresh TRON private key, derive
+  the address, optionally write via the selected backend (<code>--write-to
+  env|file|keychain</code>). Auto-detects from the installed service's
+  <code>KEY_PROVIDER</code> if no flag given. Refuses to overwrite an existing
+  file. Hex value shown once and only once.</li>
+<li><strong>Process-wide <code>/send</code> serialisation</strong> (server). A single
+  <code>threading.Lock</code> queues concurrent <code>/send</code> calls so 5-7 RPC bursts
+  per request don't compound into TronGrid 429 cascades on the
+  free tier. Tradeoff: lower peak throughput, no rate-limit storms.</li>
+<li><strong>Inner-try error wrapping in <code>/send</code></strong> (server). Transient TronGrid
+  failures during preflight (balance / TRX / destination / estimate)
+  now land in audit as <code>SEND_FAILED rpc_failed</code> with a clean 5xx
+  instead of escaping as ASGI tracebacks.</li>
+<li><strong>Cloudflare quick-tunnel in <code>run.sh</code></strong>. Local dev gets a temporary
+  public <code>https://*.trycloudflare.com</code> URL pointing at the local API
+  if <code>cloudflared</code> is installed. Disable with <code>NO_TUNNEL=1</code>.</li>
+<li><strong>Mermaid diagrams in ARCHITECTURE.md</strong> — components, payout
+  sequence (with failure branches), and a private-key data-flow
+  diagram with explicit forbidden edges.</li>
+<li><strong><code>docs/adr/</code></strong> — four Architecture Decision Records documenting
+  sync-only architecture, KeyProvider abstraction, MSK-day
+  reconciliation, and audit hard-error policy. Plus an index README.</li>
+<li><strong><code>runbooks/</code></strong> — five focused incident playbooks split out of
+  OPERATIONS.md: stuck-broadcast, rpc-outage, key-rotation,
+  audit-recovery, unresolved-key. Each leads with a Symptom / Cause /
+  TL;DR fix triplet for stressed on-call eyes.</li>
+<li><strong><code>audits/</code></strong> — committed <code>bandit</code> and <code>pip-audit</code> reports per
+  release, with a README describing the process and the rationale
+  for each annotated finding.</li>
+<li><strong><code>GUIDELINES.md</code></strong> — terse engineering principles document.</li>
+<li><strong><code>SECURITY.md</code> rewrite</strong> — formal threat model with assets,
+  adversaries, invariants, and explicit non-defences. Supported-
+  versions table. GitHub Security Advisory as the preferred channel.</li>
+<li><strong><code>RELEASING.md</code></strong> — operational release runbook, replacing the
+  shorter <code>RELEASE.md</code>.</li>
+<li><strong><code>.github/CODEOWNERS</code></strong> — money-path files routed to the owner for
+  review on every PR.</li>
+<li><strong>YAML issue forms</strong> — <code>bug.yml</code>, <code>incident.yml</code>, <code>feature.yml</code>
+  with required fields (txid, idempotency_key, severity dropdown,
+  doctor-output paste box).</li>
+<li><strong>CI: <code>install-test.yml</code></strong> — verifies the released wheel installs
+  cleanly from the GitHub Release URL on Ubuntu + macOS × Python
+  3.11 + 3.12, including <code>SHA256SUMS.txt</code> verification.</li>
+<li><strong>CI: <code>audit</code> job in <code>tests.yml</code></strong> — runs <code>bandit -ll</code> and
+  <code>pip-audit</code> on every PR.</li>
+<li><strong><code>SHA256SUMS.txt</code></strong> attached to every GitHub Release alongside
+  the wheel + sdist.</li>
+</ul>
+<h3 id="changed_4">Changed<a class="headerlink" href="#changed_4" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Pinned away CVEs.</strong> <code>python-dotenv &gt;= 1.2.2</code> (CVE-2026-28684,
+  symlink follow on <code>set_key</code>; not exploitable for us but bumped for
+  hygiene). <code>starlette &gt;= 0.49.1</code> (CVE-2025-54121 multipart DoS,
+  CVE-2025-62727 Range header DoS).</li>
+<li><strong><code>tarfile.extractall</code> hardened</strong> (<code>skr-crypto restore</code>) — uses
+  Python 3.12's <code>filter='data'</code> to drop unsafe member types in
+  addition to the pre-existing path-traversal check.</li>
+<li><strong><code>status</code> reports package version</strong> instead of git ref. The
+  service code is part of the package now; "git ref of the install"
+  is no longer a meaningful thing.</li>
+<li><strong>README rewritten</strong> — badges, ToC, before/after example, what-ships
+  table, two-minute walkthrough, documentation index.</li>
+<li><strong>OPERATIONS.md slimmed</strong> to ~120 lines as the operations <em>index</em>
+  pointing at <code>runbooks/</code>. The verbose how-to content moved into
+  individual runbook files.</li>
+</ul>
+<h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">#</a></h3>
+<ul>
+<li><code>app/</code> directory and the corresponding repository (<code>skr_crypto-payouts</code>).</li>
+<li><code>skr_crypto/cli/installer.py</code> (git clone / venv creation helpers,
+  obsolete in the single-package model).</li>
+<li><code>tests/test_commands_install.py</code> (exercised the old <code>--from-path</code>
+  flow). New install tests live in <code>test_commands_install.py</code> of the
+  next release if needed.</li>
+<li><code>--git-url</code>, <code>--ref</code>, <code>--from-path</code>, <code>--no-deps</code>, <code>--interactive</code>
+  flags on <code>install</code>.</li>
+</ul>
+<h3 id="security_3">Security<a class="headerlink" href="#security_3" title="Permanent link">#</a></h3>
+<ul>
+<li>Threat model formalised in <code>SECURITY.md</code> with explicit invariants:
+  idempotency hard contract, audit immutable on success path, key
+  never on disk under env/keychain/1password, key never exits process
+  memory, CLI read-only on the money path.</li>
+<li>
+<p>All commits + tags signed via SSH (ed25519); <code>SHA256SUMS.txt</code>
+  alongside every release artefact.</p>
+</li>
+<li>
+<p>All commits and tags now signed via SSH (operator's existing
+  ed25519 key). Add the same key to GitHub as a Signing Key for the
+  green "Verified" badge.</p>
+</li>
+</ul>
+<h3 id="changed_5">Changed<a class="headerlink" href="#changed_5" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Distribution is private now.</strong> <code>release.yml</code> no longer publishes
+  to PyPI. On <code>v*.*.*</code> tag push it builds the wheel + sdist and
+  attaches them to a GitHub Release together with the matching
+  CHANGELOG section. Consumers install via
+  <code>pip install &lt;release-wheel-url&gt;</code>.</li>
+<li>README, RELEASE, install docs, and quick-start examples updated to
+  drop PyPI references.</li>
+</ul>
+<h2 id="010-2026-04-28">[0.1.0] — 2026-04-28<a class="headerlink" href="#010-2026-04-28" title="Permanent link">#</a></h2>
+<h3 id="added_4">Added<a class="headerlink" href="#added_4" title="Permanent link">#</a></h3>
+<ul>
+<li>Initial public CLI: <code>install</code>, <code>update</code>, <code>start</code>, <code>stop</code>, <code>restart</code>,
+  <code>status</code>, <code>logs</code>, <code>balance</code>, <code>check &lt;txid&gt;</code>, <code>audit</code>, <code>reconcile</code>,
+  <code>config show/edit/validate</code>, <code>backup</code>, <code>restore</code>, <code>doctor</code>,
+  <code>version</code>, <code>help</code>.</li>
+<li><code>install</code> auto-generates a fresh high-entropy <code>AUTH_TOKEN</code> and
+  writes a chmod-600 <code>.env</code> with safe defaults. <code>--from-path PATH</code>
+  installs from a local working tree (dev mode); <code>--no-deps</code> skips
+  pip for offline / test scenarios.</li>
+<li><code>update</code> shows the CHANGELOG diff between current ref and target
+  before applying, snapshots <code>data/</code> first (unless <code>--no-backup</code>),
+  and restarts via auto-detected regime (systemd / compose / direct).</li>
+<li><code>audit</code> reads the local audit log directly (no service round trip),
+  supports filtering by event / recipient / time window, and emits
+  one JSON record per stdout line in <code>--json</code> mode for <code>jq</code> piping.</li>
+<li><code>doctor</code> runs nine environment checks (Python version, git, disk
+  space, install presence, <code>.env</code> permissions, secret strength, key
+  provider readiness, data dir, not-as-root) and exits 1 on any
+  FAIL — designed to be greppable in CI.</li>
+<li><code>config show</code> masks AUTH_TOKEN / TRONGRID_API_KEY / PRIVATE_KEY_HEX
+  by default; <code>--unsafe-show-secrets</code> opts back in.</li>
+<li>Stable exit codes (1..9) per error class, used by all commands.</li>
+<li>HTTP client (<code>api.py</code>) with strict timeouts and explicit error
+  mapping (401 → AuthError, 5xx → BadResponseError, refused →
+  ServiceUnreachableError).</li>
+<li>Lifecycle abstraction (<code>service.py</code>) auto-detects systemd / docker
+  compose / direct based on filesystem cues, with <code>--via</code> override.</li>
+<li>Test suite: 82 tests covering CLI top-level, all command happy +
+  sad paths, .env parsing, sensitive-key masking, regime detection.</li>
+<li>CI: GitHub Actions for tests on every push (Python 3.11 + 3.12),
+  CHANGELOG-touched gate on PRs (Dependabot exempt), private wheels
+  attached to GitHub Releases on <code>v*.*.*</code> tags. (No PyPI publishing
+  — distribution is private.) MkDocs workflow disabled until docs
+  hosting is decided.</li>
+<li>Docs: README, INSTALL, COMMANDS reference, SECURITY model,
+  RELEASE checklist.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/vampir15551/skr-crypto" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "content.code.copy", "content.code.annotate", "content.action.edit", "content.tabs.link", "search.suggest", "search.highlight", "search.share"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
