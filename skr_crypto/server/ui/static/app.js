@@ -7,8 +7,11 @@
  * Every API call carries the X-API-Key header from sessionStorage.
  */
 
-function app() {
-  return {
+/* Register the SPA component on Alpine.js's `alpine:init` event.
+ * This is the canonical Alpine 3 pattern — works regardless of
+ * script load order, and avoids global-scope leakage. */
+document.addEventListener('alpine:init', () => {
+  Alpine.data('app', () => ({
     // Auth state — token lives in sessionStorage only, never localStorage
     token: '',
     tokenInput: '',
@@ -174,5 +177,5 @@ function app() {
       }
       return '';
     },
-  };
-}
+  }));
+});

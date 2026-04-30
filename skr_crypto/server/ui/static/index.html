@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SKR Crypto — Operator UI</title>
   <link rel="stylesheet" href="style.css">
-  <script src="alpine.min.js" defer></script>
+  <!-- Order matters: app.js MUST execute before alpine.min.js so the
+       `Alpine.data('app', ...)` registration is in place when Alpine
+       starts scanning the DOM. -->
   <script src="app.js" defer></script>
+  <script src="alpine.min.js" defer></script>
 </head>
-<body x-data="app()" x-init="init()">
+<body x-data="app" x-init="init()">
 
 <header>
   <div class="brand">

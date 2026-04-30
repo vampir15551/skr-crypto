@@ -9,6 +9,29 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.8.2] — 2026-04-30
+
+Bugfix release for the read-only UI introduced in 1.8.0. The `app()`
+function was declared at the top level in `app.js`, which Alpine 3
+expected to find via the global scope when evaluating
+`<body x-data="app()">`. Under certain script-load orders the
+component never registered and the only visible content on `/ui/`
+was the footer banner.
+
+### Changed
+
+- **UI:** `app.js` now uses the canonical Alpine 3
+  `document.addEventListener('alpine:init', () => Alpine.data('app',
+  () => ({...})))` pattern, and `index.html` references the component
+  via `x-data="app"` (no parens). Works regardless of script load
+  order.
+- **UI:** load order in `index.html` changed to `app.js` first, then
+  `alpine.min.js` — defensive even though Alpine.data() registration
+  makes the order-independent.
+- **Test:** `test_ui_static_assets_served` updated to check for the
+  new `Alpine.data('app'` registration string instead of the old
+  `function app()`.
+
 ## [1.8.1] — 2026-04-30
 
 The "git clone + one command + service is up" release. Adds

@@ -86,7 +86,9 @@ class TestUIMount:
         assert "var(--accent)" in r.text
         r = client.get("/ui/app.js")
         assert r.status_code == 200
-        assert "function app()" in r.text
+        # 1.8.2 switched from a global `function app()` to the
+        # canonical Alpine 3 `Alpine.data('app', ...)` registration.
+        assert "Alpine.data('app'" in r.text
 
     def test_alpine_bundled(self, client):
         r = client.get("/ui/alpine.min.js")
