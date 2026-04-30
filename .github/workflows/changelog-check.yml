@@ -1,0 +1,57 @@
+name: changelog-check
+
+# Refuses any PR that touches `skr_crypto/` without also adding an
+# entry under `[Unreleased]` in CHANGELOG.md. This is the operator-
+# facing record of what changed; CI enforces that we don't ship
+# user-visible code changes without one.
+#
+# Bypass: add the `skip-changelog` label to the PR. Reserved for:
+#   - pure typo fixes in code comments
+#   - pure CI / workflow changes that don't change behaviour
+#   - pure-test additions that don't change observable behaviour
+#
+# Rationale: docs/adr/0007-engineering-safety-practices.md § 6.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify CHANGELOG was updated when skr_crypto/ changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "Changed files:"
+          echo "$changed"
+          touched_code=$(echo "$changed" | grep '^skr_crypto/' || true)
+          touched_changelog=$(echo "$changed" | grep -E '^CHANGELOG\.md$' || true)
+          if [ -n "$touched_code" ] && [ -z "$touched_changelog" ]; then
+            echo "::error::PR modifies skr_crypto/ but CHANGELOG.md is unchanged."
+            echo "::error::Add an entry under [Unreleased] describing this change."
+            echo "::error::Or add the 'skip-changelog' label if this is a non-functional refactor."
+            exit 1
+          fi
+          if [ -n "$touched_changelog" ]; then
+            # Sanity: the new lines should land under [Unreleased].
+            # We check that the diff of CHANGELOG.md adds at least one
+            # line that's plausibly an entry (not just whitespace).
+            added=$(git diff "$BASE_SHA" "$HEAD_SHA" -- CHANGELOG.md | grep -E '^\+[^+]' | grep -vE '^\+\s*$' || true)
+            if [ -z "$added" ]; then
+              echo "::warning::CHANGELOG.md was touched but no lines added."
+            fi
+          fi
+          echo "OK"

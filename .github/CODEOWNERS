@@ -1,34 +1,64 @@
-# CODEOWNERS — review ownership for skr-crypto.
+# CODEOWNERS — money-path ownership for skr-crypto.
 #
-# Even with a single maintainer, naming ownership in a tracked file
-# makes the contract explicit: PRs that touch sensitive areas
-# (signing path, audit, idempotency) are flagged for review by the
-# right person automatically. When more contributors join, this file
-# starts paying for itself immediately.
+# Each pattern below requires the listed reviewer to approve a PR that
+# modifies any matching file. Branch protection on `main` enforces this.
 #
+# While the project has a single committer, the rule operates as a
+# self-discipline gate (24-hour cooling-off period before self-approval —
+# see CONTRIBUTING.md). When a second committer joins, it becomes a
+# real two-eyes check.
+#
+# Rationale: docs/adr/0007-engineering-safety-practices.md
 # Pattern reference: https://docs.github.com/articles/about-code-owners
 
 # ── Default owner ─────────────────────────────────────────────────────
-*                                @vampir15551
+*                                       @vampir15551
 
-# ── Money path: signing, broadcast, key handling ───────────────────────
-# Anything here moves real funds or holds the private key. Reviews on
-# these paths must walk the entire diff with SECURITY.md and
-# GUIDELINES.md open.
-/skr_crypto/server/tron_client.py    @vampir15551
-/skr_crypto/server/key_providers.py  @vampir15551
-/skr_crypto/server/security.py       @vampir15551
-/skr_crypto/server/routes.py         @vampir15551
-/skr_crypto/server/idempotency.py    @vampir15551
-/skr_crypto/server/audit.py          @vampir15551
-/skr_crypto/server/startup_check.py  @vampir15551
+# ── Money path: signing, key handling, idempotency, audit ─────────────
+# Anything here moves real funds, holds a private key, or guarantees
+# replay-protection. Reviews on these paths must walk the diff with
+# SECURITY.md, the relevant ADR, and the invariant tests open.
+/skr_crypto/server/wallet.py            @vampir15551
+/skr_crypto/server/wallet_pool.py       @vampir15551
+/skr_crypto/server/tron_client.py       @vampir15551
+/skr_crypto/server/key_providers.py     @vampir15551
+/skr_crypto/server/encrypted_keystore.py @vampir15551
+/skr_crypto/server/security.py          @vampir15551
+/skr_crypto/server/tokens.py            @vampir15551
+/skr_crypto/server/idempotency.py       @vampir15551
+/skr_crypto/server/audit.py             @vampir15551
+/skr_crypto/server/risk.py              @vampir15551
+/skr_crypto/server/sanctions.py         @vampir15551
+/skr_crypto/server/routes.py            @vampir15551
+/skr_crypto/server/server.py            @vampir15551
+/skr_crypto/server/startup_check.py     @vampir15551
 
-# ── CLI keygen + secrets-touching commands ────────────────────────────
-/skr_crypto/cli/commands/keygen.py   @vampir15551
-/skr_crypto/cli/commands/install.py  @vampir15551
+# ── CLI keygen / install / token commands ─────────────────────────────
+/skr_crypto/cli/commands/keygen.py      @vampir15551
+/skr_crypto/cli/commands/wallet.py      @vampir15551
+/skr_crypto/cli/commands/token.py       @vampir15551
+/skr_crypto/cli/commands/install.py     @vampir15551
 
-# ── Release pipeline + security policy ────────────────────────────────
-/.github/workflows/release.yml       @vampir15551
-/SECURITY.md                         @vampir15551
-/RELEASING.md                        @vampir15551
-/docs/adr/                           @vampir15551
+# ── Test infrastructure (changes here can mask money-path regressions) ─
+/tests/conftest.py                      @vampir15551
+/tests/test_threat_model.py             @vampir15551
+/tests/test_wire_format_compat.py       @vampir15551
+/tests/fixtures/api_v1_golden/          @vampir15551
+/tests/test_*_property.py               @vampir15551
+
+# ── Architecture decision records (immutable; supersede only) ─────────
+/docs/adr/                              @vampir15551
+
+# ── CI workflows that gate releases ───────────────────────────────────
+/.github/workflows/test.yml             @vampir15551
+/.github/workflows/release.yml          @vampir15551
+/.github/workflows/docs.yml             @vampir15551
+/.github/workflows/changelog-check.yml  @vampir15551
+/.github/workflows/invariant-gate.yml   @vampir15551
+/.github/CODEOWNERS                     @vampir15551
+
+# ── Security + release policy ─────────────────────────────────────────
+/SECURITY.md                            @vampir15551
+/CONTRIBUTING.md                        @vampir15551
+/RELEASING.md                           @vampir15551
+/docs/security.md                       @vampir15551

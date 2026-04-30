@@ -128,8 +128,12 @@ class TestSendUsdtBroadcastResult:
         )
         assert txid == "a" * 64
 
+    @pytest.mark.invariant
     def test_empty_txid_raises(self):
-        """Even if result=True, an empty txid is unsafe to cache."""
+        """INVARIANT (ADR 0001 / 0004): even if result=True, an empty
+        txid is unsafe to cache. If this flips, idempotency would
+        cache "" as the txid for the key, and every retry would
+        return status=duplicate with no real on-chain transaction."""
         wallet, contract = self._make_wallet_and_contract(
             {"result": True, "txid": ""},
         )
@@ -139,7 +143,10 @@ class TestSendUsdtBroadcastResult:
                 "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
             )
 
+    @pytest.mark.invariant
     def test_missing_txid_raises(self):
+        """INVARIANT: a result dict without a txid key is rejected, not
+        silently cached as success."""
         wallet, contract = self._make_wallet_and_contract({"result": True})
         with pytest.raises(RuntimeError, match="empty txid"):
             wallet.send_usdt(
@@ -147,7 +154,10 @@ class TestSendUsdtBroadcastResult:
                 "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
             )
 
+    @pytest.mark.invariant
     def test_node_rejection_raises(self):
+        """INVARIANT: any non-success broadcast response shape is
+        rejected as an exception, never silently cached."""
         wallet, contract = self._make_wallet_and_contract(
             {"code": "BANDWIDTH_ERROR", "message": "out of bandwidth"},
         )
@@ -157,8 +167,11 @@ class TestSendUsdtBroadcastResult:
                 "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
             )
 
+    @pytest.mark.invariant
     def test_result_false_raises_even_with_txid(self):
-        """Some failure modes return both result=False and a txid; reject anyway."""
+        """INVARIANT: some node failures return both result=False and a
+        txid (e.g. SIGERROR). The txid is partial / not a real
+        broadcast — reject."""
         wallet, contract = self._make_wallet_and_contract(
             {"result": False, "code": "SIGERROR", "txid": "deadbeef"},
         )
@@ -168,7 +181,10 @@ class TestSendUsdtBroadcastResult:
                 "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL", Decimal("1"),
             )
 
+    @pytest.mark.invariant
     def test_unexpected_response_type_raises(self):
+        """INVARIANT: the broadcast handler is strict about the response
+        shape — anything not a dict is a hard error, not parsed-best-effort."""
         wallet, contract = self._make_wallet_and_contract("not a dict")
         with pytest.raises(RuntimeError, match="unexpected broadcast response type"):
             wallet.send_usdt(

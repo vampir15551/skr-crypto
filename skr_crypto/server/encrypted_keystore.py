@@ -220,6 +220,14 @@ def load_keystore(
         text = p.read_text(encoding="utf-8")
     except OSError as exc:
         raise KeystoreError(f"read {p}: {exc}")
+    except UnicodeDecodeError as exc:
+        # Garbage bytes that aren't valid UTF-8 → corrupt, not a
+        # crash. Caller-facing message stays generic so we don't
+        # leak any portion of the file's contents in logs.
+        raise KeystoreCorrupt(
+            f"keystore {p} is not valid UTF-8 (offset {exc.start}): "
+            f"file is corrupt or truncated"
+        )
 
     try:
         doc = json.loads(text)

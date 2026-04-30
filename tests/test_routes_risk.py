@@ -8,6 +8,8 @@ from __future__ import annotations
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+import pytest
+
 VALID = "TNPeeaaFB7K9cmo4uQpcU32zGK8G1NYqeL"
 NULL_TRON = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb"
 
@@ -93,7 +95,11 @@ class TestSendRiskPreflight:
         assert resp.status_code == 200, resp.text
         assert resp.json()["status"] == "broadcast"
 
+    @pytest.mark.invariant
     def test_high_risk_send_blocked(self, client, auth_headers, mock_tron):
+        """INVARIANT: a recipient flagged HIGH (USDT blacklist, OFAC,
+        burn address, contract destination) MUST be refused before
+        broadcast. If this regresses, money goes to the wrong address."""
         _setup_low_risk(mock_tron)
         mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)
         resp = self._post(client, auth_headers)
@@ -107,18 +113,22 @@ class TestSendRiskPreflight:
         names = [c["name"] for c in body["report"]["checks"]]
         assert "usdt_blacklist" in names
 
+    @pytest.mark.invariant
     def test_burn_address_send_blocked(self, client, auth_headers, mock_tron):
+        """INVARIANT: a known-burn address pattern is HIGH risk and
+        refused. The operator should never accidentally send to /dev/null."""
         _setup_low_risk(mock_tron)
         resp = self._post(client, auth_headers, to_address=NULL_TRON)
         assert resp.status_code == 400
         assert resp.json()["code"] == "RISK_TOO_HIGH"
 
+    @pytest.mark.invariant
     def test_high_risk_does_not_burn_idempotency_slot(
         self, client, auth_headers, mock_tron,
     ):
-        """A blocked /send must NOT poison the idempotency store —
-        otherwise the operator can't retry with the same key after
-        switching the destination."""
+        """INVARIANT: a blocked /send must NOT poison the idempotency
+        store — the operator can fix the destination and retry with
+        the same key. Risk preflight runs BEFORE idempotency.reserve()."""
         from skr_crypto.server.idempotency import idempotency
         _setup_low_risk(mock_tron)
         mock_tron.get_usdt_contract().functions.isBlackListed = MagicMock(return_value=True)

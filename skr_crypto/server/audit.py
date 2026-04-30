@@ -126,6 +126,7 @@ def record(
     txid: str = "",
     idempotency_key: str = "",
     client_ip: str = "",
+    token_id: str = "",
     result: str = "",
     details: str = "",
 ) -> None:
@@ -134,9 +135,11 @@ def record(
     This is separate from operational logs — audit records are the
     immutable trail of every financial action for compliance.
 
-    The ``wallet`` field (added in 1.4.0 for multi-wallet awareness)
-    carries the operator-friendly source-wallet name. ``from_address``
-    is still recorded — they're complementary, not redundant.
+    The ``wallet`` field (added in 1.4.0) carries the operator-friendly
+    source-wallet name. ``token_id`` (added in 1.5.0) records which
+    API token initiated the action — useful for forensics across
+    multiple back-office services. ``from_address`` is still
+    recorded — they're complementary, not redundant.
     """
     entry = {
         "id": _next_record_id(),
@@ -150,6 +153,7 @@ def record(
         "txid": txid,
         "idempotency_key": idempotency_key,
         "client_ip": client_ip,
+        "token_id": token_id,
         "result": result,
     }
     if details:

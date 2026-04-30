@@ -1,0 +1,50 @@
+{
+  "_meta": {
+    "version_introduced": "1.0.0",
+    "purpose": "Fields a v1.0.0 client expects to find on each response. Removing or renaming any of these is a BREAKING change requiring a major version bump."
+  },
+  "responses": {
+    "POST /api/v1/send (success)": [
+      "txid",
+      "from_address",
+      "to_address",
+      "amount",
+      "idempotency_key",
+      "status"
+    ],
+    "POST /api/v1/send (duplicate)": [
+      "txid",
+      "from_address",
+      "to_address",
+      "amount",
+      "idempotency_key",
+      "status"
+    ],
+    "GET /api/v1/balance": [
+      "address",
+      "trx",
+      "usdt"
+    ],
+    "GET /api/v1/health": [
+      "status",
+      "network",
+      "uptime_seconds",
+      "node_connected"
+    ],
+    "GET /api/v1/health/live": [
+      "status",
+      "uptime_seconds"
+    ],
+    "GET /api/v1/version": [
+      "git_sha",
+      "started_at",
+      "network"
+    ]
+  },
+  "error_responses": {
+    "400/500/etc": [
+      "error",
+      "code"
+    ]
+  }
+}

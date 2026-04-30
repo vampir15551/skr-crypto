@@ -72,6 +72,7 @@ def _register() -> None:
         risk,
         start_stop,
         status,
+        token,
         update,
         version_cmd,
         wallet,
@@ -92,6 +93,7 @@ def _register() -> None:
     cli.add_command(config_cmd.config_group)
     cli.add_command(keygen.cmd)
     cli.add_command(wallet.group)
+    cli.add_command(token.group)
     cli.add_command(backup.cmd)
     cli.add_command(restore.cmd)
     cli.add_command(doctor.cmd)

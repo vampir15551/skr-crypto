@@ -41,7 +41,7 @@ from skr_crypto.server.models import (
 )
 from skr_crypto.server.net import client_address
 from skr_crypto.server.risk import assess_risk, should_block
-from skr_crypto.server.security import verify_api_key
+from skr_crypto.server.security import require_scope
 from skr_crypto.server.shutdown import seconds_remaining, uptime
 from skr_crypto.server.tron_client import tron
 from skr_crypto.server.version import GIT_SHA, START_TIME
@@ -94,19 +94,25 @@ def _resolve_wallet(name: str | None):
 # --------------------------------------------------------------------------
 
 @router.post("/send", response_model=SendResponse)
-def send(req: SendRequest, request: Request, _: str = Depends(verify_api_key)):
+def send(
+    req: SendRequest,
+    request: Request,
+    token_id: str = Depends(require_scope("send")),
+):
+    request.state.token_id = token_id
     with _send_lock:
         return _send_impl(req, request)
 
 
 def _send_impl(req: SendRequest, request: Request) -> SendResponse:
     client_ip = client_address(request)
+    token_id = getattr(request.state, "token_id", "")
     started = time.time()
     amount = req.amount
 
     log.info(
-        "[SEND] Incoming | ip=%s wallet=%s to=%s amount=%s key=%s",
-        client_ip, req.wallet or "<auto>", req.to_address, req.amount,
+        "[SEND] Incoming | ip=%s token=%s wallet=%s to=%s amount=%s key=%s",
+        client_ip, token_id, req.wallet or "<auto>", req.to_address, req.amount,
         req.idempotency_key,
     )
 
@@ -151,6 +157,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                 amount=str(amount),
                 idempotency_key=req.idempotency_key,
                 client_ip=client_ip,
+                token_id=token_id,
                 result="risk_too_high",
                 details=(
                     f"level={risk_level_str} "
@@ -176,6 +183,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
             txid=existing_txid,
             idempotency_key=req.idempotency_key,
             client_ip=client_ip,
+            token_id=token_id,
             result="duplicate",
         )
         metrics.tx_duplicate_total.inc()
@@ -202,6 +210,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                     amount=str(amount),
                     idempotency_key=req.idempotency_key,
                     client_ip=client_ip,
+                    token_id=token_id,
                     result="insufficient_usdt",
                     details=f"have={balance}",
                 )
@@ -219,6 +228,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                     amount=str(amount),
                     idempotency_key=req.idempotency_key,
                     client_ip=client_ip,
+                    token_id=token_id,
                     result="insufficient_trx",
                     details=f"have={trx_balance}",
                 )
@@ -261,6 +271,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                         amount=str(amount),
                         idempotency_key=req.idempotency_key,
                         client_ip=client_ip,
+                        token_id=token_id,
                         result="energy_too_expensive",
                         details=(
                             f"energy={estimated_energy} burn={estimated_burn_trx} TRX "
@@ -296,6 +307,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                 amount=str(amount),
                 idempotency_key=req.idempotency_key,
                 client_ip=client_ip,
+                token_id=token_id,
                 result="rpc_failed",
                 details=f"{type(exc).__name__}: {exc}",
             )
@@ -330,6 +342,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
                 amount=str(amount),
                 idempotency_key=req.idempotency_key,
                 client_ip=client_ip,
+                token_id=token_id,
                 result="tx_failed",
                 details=str(exc),
             )
@@ -355,6 +368,7 @@ def _send_impl(req: SendRequest, request: Request) -> SendResponse:
         txid=txid,
         idempotency_key=req.idempotency_key,
         client_ip=client_ip,
+        token_id=token_id,
         result="broadcast",
         details=f"elapsed={elapsed:.2f}s risk={risk_level_str}",
     )
@@ -411,8 +425,9 @@ def balance(
         description="Wallet name (omit for auto-pick by max USDT)",
         max_length=64,
     ),
-    _: str = Depends(verify_api_key),
+    token_id: str = Depends(require_scope("read")),
 ):
+    request.state.token_id = token_id
     client_ip = client_address(request)
     log.info("[BALANCE] Request from %s | wallet=%s", client_ip, wallet or "<auto>")
 
@@ -448,7 +463,11 @@ def balance(
 # --------------------------------------------------------------------------
 
 @router.get("/wallets", response_model=WalletListResponse)
-def wallets_endpoint(request: Request, _: str = Depends(verify_api_key)):
+def wallets_endpoint(
+    request: Request,
+    token_id: str = Depends(require_scope("read")),
+):
+    request.state.token_id = token_id
     """Return every wallet in the pool with live balances + the auto-pick
     winner. Cost: N TRX-balance + N USDT-balance + N resource RPCs. For a
     single wallet this is the same cost as /balance.
@@ -504,7 +523,7 @@ def risk_endpoint(
     address: str,
     request: Request,
     external: bool = False,
-    _: str = Depends(verify_api_key),
+    token_id: str = Depends(require_scope("read")),
 ):
     """Run all wallet-risk checks against ``address``.
 
@@ -533,7 +552,7 @@ def risk_endpoint(
 # --------------------------------------------------------------------------
 
 @router.get("/metrics")
-def metrics_endpoint(_: str = Depends(verify_api_key)):
+def metrics_endpoint(_: str = Depends(require_scope("metrics"))):
     """Prometheus text exposition.
 
     Requires the same X-API-Key as every other endpoint — scrapers must
@@ -578,7 +597,7 @@ def version():
 
 
 @router.get("/health", response_model=HealthResponse)
-def health(request: Request, _: str = Depends(verify_api_key)):
+def health(request: Request, _: str = Depends(require_scope("read"))):
     client_ip = client_address(request)
     log.info("[HEALTH] Request from %s", client_ip)
 

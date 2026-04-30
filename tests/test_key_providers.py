@@ -116,7 +116,11 @@ class TestFileKeyProvider:
         key = provider.load_wallets()[0].raw_key
         assert bytes(key) == TEST_BYTES
 
+    @pytest.mark.invariant
     def test_world_readable_file_rejected(self, tmp_path, monkeypatch):
+        """INVARIANT: a key file with mode 0644 must be refused at boot.
+        If we ever soft-fail here, a casual `ls` from another user is
+        enough to dump the treasury key."""
         key_file = tmp_path / "treasury.key"
         key_file.write_text(TEST_HEX)
         os.chmod(key_file, 0o644)  # group + other can read
@@ -125,7 +129,10 @@ class TestFileKeyProvider:
         with pytest.raises(SystemExit):
             kp.FileKeyProvider().load_wallets()
 
+    @pytest.mark.invariant
     def test_group_readable_file_rejected(self, tmp_path, monkeypatch):
+        """INVARIANT: a key file with mode 0640 (group read) must be
+        refused at boot — even shared-group access is too loose."""
         key_file = tmp_path / "treasury.key"
         key_file.write_text(TEST_HEX)
         os.chmod(key_file, 0o640)  # group can read

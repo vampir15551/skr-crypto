@@ -72,6 +72,7 @@ class TestRoundTrip:
 
 
 class TestPassphrase:
+    @pytest.mark.invariant
     def test_wrong_passphrase_raises_clean_error(self, tmp_path):
         path = tmp_path / "ks.json"
         ks.init_keystore(path, b"correct")
@@ -85,6 +86,7 @@ class TestPassphrase:
         with pytest.raises(ks.KeystoreError, match="empty"):
             ks.init_keystore(tmp_path / "ks.json", b"")
 
+    @pytest.mark.invariant
     def test_save_refuses_zero_key(self, tmp_path):
         path = tmp_path / "ks.json"
         ks.init_keystore(path, b"pw")
@@ -100,6 +102,7 @@ class TestPassphrase:
 
 
 class TestFileMode:
+    @pytest.mark.invariant
     def test_world_readable_keystore_rejected(self, tmp_path):
         path = tmp_path / "ks.json"
         ks.init_keystore(path, b"pw")

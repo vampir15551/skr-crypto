@@ -69,6 +69,9 @@ dev = [
     "pytest>=8.0",
     "pytest-mock>=3.12",
     "responses>=0.25",
+    # Property-based tests for the money-path modules. See
+    # docs/adr/0007-engineering-safety-practices.md.
+    "hypothesis>=6.0",
     "ruff>=0.5",
     "build>=1.2",
     # Security scans — see audits/.
@@ -109,6 +112,21 @@ addopts = [
     "--strict-markers",
 ]
 testpaths = ["tests"]
+markers = [
+    # Documented assumptions about how money moves. If one of these
+    # tests changes, the contract changes — and that requires an ADR
+    # superseding the relevant prior decision (see ADR 0007). The
+    # invariant-gate CI workflow refuses to merge a PR that modifies
+    # an invariant test without the supporting ADR.
+    "invariant: critical money-path invariant. Changes require an ADR.",
+    # Property-based tests via Hypothesis. Slower than unit tests; run
+    # on every CI build but skippable locally with `-m 'not property'`
+    # for fast feedback.
+    "property: property-based test (Hypothesis-driven).",
+    # Tests that exercise a specific adversary class from
+    # docs/security.md. One adversary → one test.
+    "threat_model: threat-model test for an adversary class.",
+]
 
 # ---------------------------------------------------------------------------
 # Lint

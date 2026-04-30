@@ -1,0 +1,37 @@
+{
+  "_meta": {
+    "version_introduced": "1.4.0",
+    "purpose": "Fields added in 1.4.0 (multi-wallet release). v1.4 callers expect these on top of the v1.0 base set. Removing or renaming any of these is a BREAKING change."
+  },
+  "responses": {
+    "POST /api/v1/send (success)": [
+      "wallet"
+    ],
+    "POST /api/v1/send (duplicate)": [
+      "wallet"
+    ],
+    "GET /api/v1/balance": [
+      "wallet"
+    ],
+    "GET /api/v1/wallets": [
+      "wallets",
+      "auto_pick"
+    ],
+    "GET /api/v1/wallets[].wallets[]": [
+      "wallet",
+      "address",
+      "trx",
+      "usdt"
+    ],
+    "GET /api/v1/health": [
+      "wallet_count",
+      "wallet_names"
+    ]
+  },
+  "error_responses": {
+    "WALLET_NOT_FOUND (404)": [
+      "wallet",
+      "available"
+    ]
+  }
+}

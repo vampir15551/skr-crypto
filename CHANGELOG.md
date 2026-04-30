@@ -9,6 +9,102 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-04-30
+
+The "safe-update foundation" release. No new wire-format additions
+beyond per-caller API tokens; the bulk of this release is engineering
+infrastructure that protects every release going forward.
+
+### Added — engineering safety scaffolding (ADR 0007)
+
+- **`@pytest.mark.invariant` marker** registered. Tests that assert
+  money-path invariants — empty txid never cached, audit hard-error
+  is 5xx, idempotency commit is atomic, OFAC-listed addresses are
+  blocked, etc. — now declare it explicitly. 26 invariant tests
+  marked (16 retroactively + 10 new).
+- **Threat-model tests** (`tests/test_threat_model.py`) — one test
+  per adversary class in `docs/security.md`. 14 tests covering
+  AT1 (network attacker), AT2 (caller with token), AT3 (operator
+  shell), AT4 (root), AT5 (stolen backup), AT6 (compromised dep).
+- **Wire-format compatibility tests** (`tests/test_wire_format_compat.py`)
+  with versioned golden fixtures. Each major API version has a JSON
+  snapshot of required fields. Removing/renaming a documented field
+  breaks a test, forcing a major-version + ADR.
+- **Property-based tests** via Hypothesis on idempotency state
+  machine and encrypted-keystore parser. Found and fixed a
+  `UnicodeDecodeError` crash on garbage keystore files (now raises
+  `KeystoreCorrupt` cleanly).
+- **`changelog-check.yml`** GHA workflow — refuses PRs that modify
+  `skr_crypto/` without a `CHANGELOG.md` update under `[Unreleased]`.
+  Bypass via `skip-changelog` label.
+- **`invariant-gate.yml`** GHA workflow — refuses PRs that modify
+  `@pytest.mark.invariant` tests without an `invariant-change`
+  label (which itself requires CODEOWNERS approval). Forces an
+  ADR-superseding flow for invariant changes.
+- **Updated `.github/CODEOWNERS`** with the full money-path file
+  list. Branch-protection enforcement on `main` requires CODEOWNERS
+  approval before merge.
+- **`CONTRIBUTING.md`** — operator-facing PR checklist, money-path
+  rules, ADR add/supersede flow, cooling-off discipline for
+  single-committer mode.
+- **Updated `.github/PULL_REQUEST_TEMPLATE.md`** with the full
+  invariant / wire-format / threat-model checkboxes. CI fails on a
+  PR with the template's checkboxes still unchecked.
+
+### Added — per-caller API tokens (ADR 0008, A3)
+
+- **`skr_crypto.server.tokens` module** — Token store with scrypt-
+  hashed entries, scope hierarchy (`admin` > `send` > `read`,
+  `metrics` separate), constant-time per-row verification.
+  Persistent in SQLite (shares `IDEMPOTENCY_DB_PATH`); in-memory
+  fallback for dev / tests.
+- **Scope-gated routes**:
+  - `POST /send` requires `send`
+  - `GET /balance`, `/wallets`, `/risk`, `/health` require `read`
+  - `GET /metrics` requires `metrics` (or any wider scope)
+- **`require_scope("...")` FastAPI dependency** — replaces the
+  monolithic `verify_api_key` for new endpoints. Returns 403
+  `INSUFFICIENT_SCOPE` (distinct from 401) when auth ok but scope
+  wrong.
+- **`skr-crypto token` CLI subgroup**:
+  - `token list [--include-revoked] [--json]`
+  - `token show <id> [--json]`
+  - `token create --name X --scope send,read`
+  - `token revoke <id> [--yes]`
+  - `token rotate <id> [--yes]` — atomic create-new + revoke-old
+- **Audit gains `token_id` field** on every authenticated event.
+  Forensic queries now answer "which back-office service triggered
+  this transfer?" instead of "which IP".
+- **Backward compat with legacy `AUTH_TOKEN`**: still honoured as a
+  synthetic admin token (`id=legacy`); a deprecation warning is
+  logged once on first use. To be removed in 2.0.
+
+### Changed
+
+- **Bumped `cryptography>=46.0.7,<48.0`** to skip three CVEs in
+  the 45.x series (CVE-2026-26007, -34073, -39892). pip-audit clean.
+- **Added `hypothesis>=6.0`** to the `[dev]` extra.
+- **`encrypted_keystore.load_keystore`** now wraps `UnicodeDecodeError`
+  on garbage input as `KeystoreCorrupt` instead of crashing
+  (found by Hypothesis fuzz).
+- **Updated `verify_api_key`** to delegate to scope-aware path with
+  default `read` scope. Existing endpoints not yet migrated to
+  `require_scope` keep working via this shim.
+
+### Migration
+
+Single-token deploys keep working unchanged: `AUTH_TOKEN` in `.env`
+behaves as before (full admin access). Migrate at your own pace via
+`skr-crypto token create --name backoffice --scope send,read` →
+update caller config → `skr-crypto token revoke <legacy>` (or
+unset `AUTH_TOKEN`).
+
+### Engineering metrics
+
+- 388 → **454 tests passing** (+66, of which 35 new + 31 token tests)
+- ruff clean, pip-audit clean, bandit 0 high
+- mkdocs strict-mode build clean
+
 ## [1.4.0] — 2026-04-30
 
 The "multi-wallet treasury" release. The single-wallet shape is gone:

@@ -27,14 +27,23 @@ class TestIdempotencyStoreBasic:
         # Slot is free again — a new reserve succeeds.
         assert store.reserve("k1") is None
 
+    @pytest.mark.invariant
     def test_release_does_not_overwrite_committed(self):
+        """INVARIANT: a defensive release() on an already-committed slot
+        must NOT erase the cached txid. The exception path that raised
+        after commit() lands here; if release() ever clobbered the slot,
+        retries with the same key would re-broadcast → double-spend."""
         store = IdempotencyStore()
         assert store.reserve("k1") is None
         store.commit("k1", "txid1")
         store.release("k1")  # must be a no-op
         assert store.reserve("k1") == "txid1"
 
+    @pytest.mark.invariant
     def test_commit_rejects_empty_txid(self):
+        """INVARIANT: caching an empty string as 'the txid' would mean
+        every retry returns status=duplicate with no real on-chain
+        transaction. Refuse at the source."""
         store = IdempotencyStore()
         store.reserve("k1")
         with pytest.raises(ValueError):
@@ -83,9 +92,13 @@ class TestIdempotencyConcurrency:
     verify that exactly one reservation is granted.
     """
 
+    @pytest.mark.invariant
     def test_concurrent_reserve_same_key_only_one_winner(self):
-        """N threads race on reserve(); exactly one gets the slot, rest get the
-        committed txid back."""
+        """INVARIANT (ADR 0001): N threads race on reserve(); exactly
+        one gets the slot, the rest get the committed txid back. If
+        this ever produces 2+ winners, two threads would both broadcast
+        with the same idempotency key — the original double-spend bug
+        we built the system to prevent."""
         store = IdempotencyStore()
         N = 20
         barrier = threading.Barrier(N)

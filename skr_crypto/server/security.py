@@ -34,6 +34,15 @@ from tronpy.keys import PrivateKey
 
 from skr_crypto.server.config import AUTH_TOKEN
 from skr_crypto.server.key_providers import KeyProvider, get_key_provider
+from skr_crypto.server.tokens import (
+    InsufficientScope,
+    TokenInvalid,
+    TokenRevoked,
+    warn_legacy_once,
+)
+from skr_crypto.server.tokens import (
+    tokens as _token_store,
+)
 from skr_crypto.server.wallet import Wallet
 
 log = logging.getLogger("payouts")
@@ -110,12 +119,62 @@ def lock_key_store() -> None:
 
 
 def verify_api_key(request: Request) -> str:
-    """Validate X-API-Key header (constant-time comparison)."""
-    if not AUTH_TOKEN:
-        raise HTTPException(500, "AUTH_TOKEN not configured")
+    """Validate X-API-Key against the token store with default scope=read.
 
+    Kept for backward-compat with endpoints that haven't been migrated
+    to explicit scope dependencies yet. New code should use
+    ``require_scope("send" / "read" / "metrics" / "admin")`` directly.
+
+    Returns the **token id** (or ``"legacy"`` if matched against
+    ``AUTH_TOKEN``) — not the plaintext token. Routes that want to
+    record the caller in audit/logs read this.
+    """
+    return _verify_with_scope(request, "read")
+
+
+def require_scope(scope: str):
+    """FastAPI dependency factory: ``Depends(require_scope("send"))``.
+
+    Validates the X-API-Key carries ``scope`` (or any scope that
+    implies it). Returns the token id (or ``"legacy"``) on success;
+    raises HTTPException 401/403 on failure.
+    """
+    def dep(request: Request) -> str:
+        return _verify_with_scope(request, scope)
+    dep.__name__ = f"require_scope_{scope}"
+    return dep
+
+
+def _verify_with_scope(request: Request, required_scope: str) -> str:
+    """Common verification path. Constant-time per row; uses hmac
+    in the legacy-AUTH_TOKEN branch and scrypt+hmac in the per-token
+    branch."""
     api_key = request.headers.get("X-API-Key", "")
-    if not api_key or not hmac.compare_digest(api_key, AUTH_TOKEN):
-        raise HTTPException(401, "Invalid or missing X-API-Key")
+    if not api_key:
+        raise HTTPException(401, "Missing X-API-Key")
 
-    return api_key
+    # Legacy AUTH_TOKEN path — short-circuits the token store. Logged
+    # once per process.
+    if AUTH_TOKEN and hmac.compare_digest(api_key, AUTH_TOKEN):
+        warn_legacy_once()
+        return "legacy"
+
+    # Per-caller token path
+    try:
+        token_id = _token_store.verify(api_key, required_scope=required_scope)
+    except TokenInvalid:
+        raise HTTPException(401, "Invalid or missing X-API-Key")
+    except TokenRevoked:
+        raise HTTPException(401, "Token has been revoked")
+    except InsufficientScope as exc:
+        # 403 (auth ok, scope wrong) — distinct from 401 (no auth).
+        raise HTTPException(
+            403,
+            {
+                "error": exc.args[0],
+                "code": "INSUFFICIENT_SCOPE",
+                "required_scope": exc.required,
+                "token_scopes": exc.has,
+            },
+        )
+    return token_id

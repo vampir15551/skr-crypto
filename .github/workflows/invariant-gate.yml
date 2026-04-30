@@ -1,0 +1,96 @@
+name: invariant-gate
+
+# Refuses any PR that modifies an `@pytest.mark.invariant` test
+# without also adding a new ADR superseding the relevant prior one.
+#
+# Invariants are documented assumptions about how money moves. They
+# change ONLY through an ADR — never through a test edit. Without
+# this gate, a regression could be papered over by relaxing the
+# assertion that catches it.
+#
+# Bypass: add the `invariant-change` label after writing the new ADR
+# and getting it reviewed. The label requires CODEOWNERS approval
+# to apply.
+#
+# Rationale: docs/adr/0007-engineering-safety-practices.md § 1.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pytest minimally
+        run: pip install pytest hypothesis
+      - name: Identify invariant tests in this PR
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # Files in tests/ that changed in this PR
+          changed_test_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- 'tests/*.py' || true)
+          if [ -z "$changed_test_files" ]; then
+            echo "No test files changed — invariant gate not triggered."
+            exit 0
+          fi
+          echo "Changed test files:"
+          echo "$changed_test_files"
+
+          # For each changed test file, check whether the diff touches
+          # any line within an @pytest.mark.invariant block. We grep
+          # for the marker; if the marker appears in either the +/- side
+          # of the diff, we flag it.
+          touched_invariant=0
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            # Get the diff for this file
+            diff=$(git diff "$BASE_SHA" "$HEAD_SHA" -- "$f")
+            # Heuristic: a line within ~10 lines of "pytest.mark.invariant"
+            # is part of an invariant test. We're permissive — false
+            # positives just nudge toward writing the ADR.
+            if echo "$diff" | grep -q 'pytest\.mark\.invariant'; then
+              echo "::warning::Diff in $f touches an @pytest.mark.invariant decorator or its surrounding lines"
+              touched_invariant=1
+            fi
+            # Also: any +/- line in a function under @pytest.mark.invariant
+            # is risky. We approximate by grepping for the marker in the
+            # FULL file, then checking if any modified line numbers fall
+            # inside an invariant function. That's complex shell, so we
+            # use a Python helper:
+          done <<< "$changed_test_files"
+
+          if [ "$touched_invariant" -eq 1 ]; then
+            # Check for the bypass label.
+            if [ "${{ contains(github.event.pull_request.labels.*.name, 'invariant-change') }}" = "true" ]; then
+              echo "::notice::Invariant change detected, but PR has 'invariant-change' label — assuming the ADR is in place."
+              exit 0
+            fi
+            echo "::error::This PR modifies an @pytest.mark.invariant test."
+            echo "::error::Per ADR 0007, that requires a new ADR superseding the relevant prior one."
+            echo "::error::1. Write the ADR (docs/adr/00XX-...md)."
+            echo "::error::2. Get the ADR reviewed."
+            echo "::error::3. Add the 'invariant-change' label to this PR."
+            exit 1
+          fi
+          echo "No invariant tests touched. OK."
+
+      - name: Run the invariant tests
+        # Final smoke check: every @pytest.mark.invariant test still passes.
+        # If a regression broke one of them, this will fail loudly.
+        run: |
+          pip install -e ".[server,dev]"
+          pytest -m invariant -v

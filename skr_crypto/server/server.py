@@ -29,6 +29,7 @@ from skr_crypto.server.net import client_address
 from skr_crypto.server.routes import router
 from skr_crypto.server.security import load_wallets, lock_key_store
 from skr_crypto.server.shutdown import mark_started, reset_timer
+from skr_crypto.server.tokens import init_token_store
 from skr_crypto.server.tron_client import tron
 from skr_crypto.server.wallet_pool import wallets
 
@@ -66,6 +67,10 @@ _limiter = _RateLimiter()
 async def lifespan(_app: FastAPI):
     # All sync calls — no await
     tron.init()
+    # Initialise the per-caller token store. Shares the idempotency DB
+    # path when configured; in-memory otherwise (dev / tests).
+    from skr_crypto.server.config import IDEMPOTENCY_DB_PATH
+    init_token_store(IDEMPOTENCY_DB_PATH or None)
     # Load every configured wallet through the active KeyProvider and
     # populate the pool BEFORE we start serving traffic. The
     # log line in WalletPool.init() prints the names so the operator
