@@ -60,7 +60,10 @@ server = [
     # AES-256-GCM + scrypt for the encrypted_file key provider. Pure
     # Python wheels exist for every platform; the C extensions ship
     # statically linked. No system openssl-dev required at install.
-    "cryptography>=42.0,<46.0",
+    # Lower bound is 46.0.7 to skip CVE-2026-26007, CVE-2026-34073, and
+    # CVE-2026-39892 (all fixed in the 46.0.x series). We pin under
+    # 48.0 so a future major bump can't surprise us.
+    "cryptography>=46.0.7,<48.0",
 ]
 dev = [
     "pytest>=8.0",

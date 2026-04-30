@@ -1,24 +1,25 @@
 name: docs
 
-# Builds the mkdocs site and publishes it. Three hosting options
-# documented in `README.md` § Documentation; this workflow handles
-# whichever you've enabled at the repo level:
+# Builds the mkdocs site and pushes it to the `gh-pages` branch via
+# `mkdocs gh-deploy`. This works on any repo — public or private,
+# Pages-enabled or not. The branch is the publishing target; how it's
+# *served* is your choice:
 #
-#   1. GitHub Pages (default below). Requires:
-#        - public repo, OR a GitHub Pro plan for private repos
-#        - Settings → Pages → Source = "GitHub Actions"
-#      The workflow runs on every push to main + every release tag.
+#   1. GitHub Pages — Settings → Pages → "Deploy from a branch" →
+#      branch=gh-pages, folder=/. Free for public repos; requires
+#      GitHub Pro for private.
 #
-#   2. Cloudflare Pages — set up via the Cloudflare GitHub App; CFP
-#      polls the repo and runs `mkdocs build --strict` itself. No GHA
-#      changes needed beyond keeping `mkdocs.yml` strict-clean.
+#   2. Cloudflare Pages — connect via the Cloudflare GitHub App; CFP
+#      polls `gh-pages` and serves the static files. Works with
+#      private repos, no Pro needed. Custom domain is one click.
 #
-#   3. Self-host — build via the `mkdocs build --strict` step below,
-#      then rsync `site/` to your VPS (uncomment the `rsync` step and
-#      set the `DOCS_SSH_*` repo secrets).
+#   3. Self-host — `git clone --branch gh-pages` somewhere, point
+#      Caddy / nginx at it, set up a cron to pull. The `gh-pages`
+#      branch is just a static site — anything that serves a folder
+#      will do.
 #
-# `workflow_dispatch` lets you smoke-test the build manually whenever
-# you want, regardless of the trigger choice above.
+# The workflow runs on every push to main + every release tag.
+# `workflow_dispatch` lets you smoke-test the build manually.
 
 on:
   push:
@@ -27,20 +28,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write   # needs write to push the gh-pages branch
 
-# Allow only one concurrent docs deploy.
+# Allow only one concurrent docs deploy per branch / tag context.
 concurrency:
-  group: pages
+  group: docs-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # mkdocs gh-deploy needs the full history to push to gh-pages
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -49,31 +51,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[docs]"
+      - name: Configure git for the gh-pages push
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Build site (strict — fails on broken links / missing nav entries)
         run: mkdocs build --strict
-      - name: Upload artifact for Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-      # --- Self-host alternative (commented; enable if you don't use Pages) ---
-      # - name: Rsync to docs host
-      #   if: github.ref == 'refs/heads/main'
-      #   uses: burnett01/rsync-deployments@7.0.1
-      #   with:
-      #     switches: -avzr --delete
-      #     path: site/
-      #     remote_path: /var/www/skr-crypto-docs/
-      #     remote_host: ${{ secrets.DOCS_SSH_HOST }}
-      #     remote_user: ${{ secrets.DOCS_SSH_USER }}
-      #     remote_key:  ${{ secrets.DOCS_SSH_KEY  }}
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5
+      - name: Deploy to gh-pages branch
+        # Only push from main and release tags; manual dispatch builds
+        # but doesn't deploy (so a smoke test from a feature branch
+        # can't accidentally clobber the live site).
+        if: github.event_name == 'push'
+        run: |
+          mkdocs gh-deploy --force --strict \
+            --message "docs: deploy ${{ github.sha }} from ${{ github.ref_name }}"
