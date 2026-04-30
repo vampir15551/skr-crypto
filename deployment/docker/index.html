@@ -487,6 +487,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="End-to-end first deploy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-command-bootstrap-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One-command bootstrap (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-for-environments-where-you-cant-run-the-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual (for environments where you can't run the script)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1956,6 +1984,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="End-to-end first deploy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-command-bootstrap-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One-command bootstrap (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-for-environments-where-you-cant-run-the-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual (for environments where you can't run the script)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2176,116 +2232,152 @@
 </span></code></pre></div>
 <hr />
 <h2 id="end-to-end-first-deploy">End-to-end first deploy<a class="headerlink" href="#end-to-end-first-deploy" title="Permanent link">#</a></h2>
+<h3 id="one-command-bootstrap-recommended">One-command bootstrap (recommended)<a class="headerlink" href="#one-command-bootstrap-recommended" title="Permanent link">#</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/vampir15551/skr-crypto.git
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd</span><span class="w"> </span>skr-crypto
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># 1. Install locally (just enough to use the CLI for keystore management).</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>python3.12<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nb">source</span><span class="w"> </span>venv/bin/activate
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[server]&quot;</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># 2. Copy + edit .env.</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Edit AUTH_TOKEN, TRON_NETWORK, TRONGRID_API_KEY, KEY_PROVIDER=encrypted_file</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># Set KEYSTORE_FILE=data/keystore.json (relative to the install dir; container mounts ./data)</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># 3. Initialise the keystore + add a wallet — on the HOST, not in the container.</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>encrypt<span class="w"> </span>-o<span class="w"> </span>data/keystore.json
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>generate<span class="w"> </span>main
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1"># 4. Decide how to provide the passphrase.</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1">#    Option A — env var (simplest):</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;KEY_PASSPHRASE=your-passphrase-here&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1">#    Option B — file mount (more secret-manager-friendly):</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>secrets
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;your-passphrase-here&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>secrets/keystore.pass
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>secrets/keystore.pass
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;KEY_PASSPHRASE_FILE=/run/secrets/keystore.pass&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="c1"># Then add to docker-compose.yml volumes:</span>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="c1">#   - ./secrets/keystore.pass:/run/secrets/keystore.pass:ro</span>
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="c1"># 5. Start.</span>
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
-</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>
-</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="c1"># 6. Verify.</span>
-</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>curl<span class="w"> </span>http://127.0.0.1:8000/api/v1/health/live
-</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>skr-crypto
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>./scripts/bootstrap-docker.sh
+</span></code></pre></div>
+<p>The bootstrap script:</p>
+<ol>
+<li><strong>Pre-flight</strong> — verifies Docker daemon is running; refuses to
+   overwrite an existing <code>.env</code> unless <code>BOOTSTRAP_FORCE=1</code>.</li>
+<li><strong>Secret generation</strong> — <code>AUTH_TOKEN</code>, <code>KEY_PASSPHRASE</code>,
+   <code>WEBHOOK_SIGNING_SECRET</code> via <code>openssl rand -hex 32</code>.</li>
+<li><strong><code>.env</code> write</strong> — chmod-600, with sane local-dev defaults
+   (encrypted_file backend, mainnet, audit log + idempotency DB
+   on the bind-mounted <code>./data</code> volume).</li>
+<li><strong>Image build</strong> — <code>docker compose build skr-crypto</code>. ~1-2 min
+   on a fresh machine, ~5s with cache.</li>
+<li><strong>Keystore init</strong> — runs <code>skr-crypto wallet encrypt</code> inside an
+   ephemeral container (no Python needed on the host). Uses the
+   <code>KEY_PASSPHRASE</code> env var to skip the interactive double-confirm.</li>
+<li><strong>Wallet generation</strong> — <code>skr-crypto wallet generate main</code> (also
+   in-container).</li>
+<li><strong>Service start</strong> — <code>docker compose up -d</code>, with healthcheck.</li>
+<li><strong>Health probe wait</strong> — polls <code>/health/live</code> for up to 60 s.</li>
+<li><strong>Summary</strong> — prints the UI URL, the AUTH_TOKEN to paste, the
+   newly-created wallet's address, and common ops commands.</li>
+</ol>
+<p>Re-run with <code>BOOTSTRAP_FORCE=1</code> to wipe <code>.env</code> + <code>./data/</code> and start
+over.</p>
+<p>After the script finishes:</p>
+<ul>
+<li><strong>UI</strong>: <a href="http://127.0.0.1:8000/ui/">http://127.0.0.1:8000/ui/</a> — paste the printed token.</li>
+<li><strong>Wallet <code>main</code></strong>: fund the printed address with ≥50 TRX (for
+  fees) + the USDT you want to send.</li>
+<li><strong>First /send</strong>: copy the curl example from the script's summary.</li>
+</ul>
+<h3 id="manual-for-environments-where-you-cant-run-the-script">Manual (for environments where you can't run the script)<a class="headerlink" href="#manual-for-environments-where-you-cant-run-the-script" title="Permanent link">#</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/vampir15551/skr-crypto.git
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>skr-crypto
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># 1. Install locally (just enough to use the CLI for keystore management).</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>python3.12<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[server]&quot;</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># 2. Copy + edit .env.</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># Edit AUTH_TOKEN, TRON_NETWORK, TRONGRID_API_KEY, KEY_PROVIDER=encrypted_file</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Set KEYSTORE_FILE=data/keystore.json (relative to the install dir; container mounts ./data)</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="c1"># 3. Initialise the keystore + add a wallet — on the HOST, not in the container.</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>encrypt<span class="w"> </span>-o<span class="w"> </span>data/keystore.json
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>generate<span class="w"> </span>main
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="c1"># 4. Decide how to provide the passphrase.</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="c1">#    Option A — env var (simplest):</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;KEY_PASSPHRASE=your-passphrase-here&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="c1">#    Option B — file mount (more secret-manager-friendly):</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>secrets
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;your-passphrase-here&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>secrets/keystore.pass
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>secrets/keystore.pass
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;KEY_PASSPHRASE_FILE=/run/secrets/keystore.pass&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="c1"># Then add to docker-compose.yml volumes:</span>
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="c1">#   - ./secrets/keystore.pass:/run/secrets/keystore.pass:ro</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>
+</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="c1"># 5. Start.</span>
+</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
+</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>
+</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="c1"># 6. Verify.</span>
+</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a>curl<span class="w"> </span>http://127.0.0.1:8000/api/v1/health/live
+</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>skr-crypto
 </span></code></pre></div>
 <hr />
 <h2 id="operations-inside-the-container">Operations inside the container<a class="headerlink" href="#operations-inside-the-container" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Logs</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>skr-crypto
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Live wallet listing (CLI inside container)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>skr-crypto<span class="w"> </span>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>list<span class="w"> </span>--offline
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Tail audit</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>skr-crypto<span class="w"> </span>tail<span class="w"> </span>-f<span class="w"> </span>/var/lib/skr-crypto/data/audit.log
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Restart (after adding wallets / changing config)</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>skr-crypto
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Logs</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>skr-crypto
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Live wallet listing (CLI inside container)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>skr-crypto<span class="w"> </span>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>list<span class="w"> </span>--offline
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Tail audit</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>skr-crypto<span class="w"> </span>tail<span class="w"> </span>-f<span class="w"> </span>/var/lib/skr-crypto/data/audit.log
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Restart (after adding wallets / changing config)</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>skr-crypto
 </span></code></pre></div>
 <p>The CLI works inside the container the same as on the host. Mutating commands (<code>wallet add</code>, <code>wallet generate</code>) modify the same volume your service reads from — but <strong>you must restart</strong> for the new wallet to land in the pool.</p>
 <hr />
 <h2 id="adding-a-wallet-to-a-live-deploy">Adding a wallet to a live deploy<a class="headerlink" href="#adding-a-wallet-to-a-live-deploy" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Either: from the host (the venv with skr-crypto installed)</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">KEY_PASSPHRASE</span><span class="o">=</span><span class="s1">&#39;your-passphrase-here&#39;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>generate<span class="w"> </span>cold
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Or: inside the container</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>skr-crypto<span class="w"> </span>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>generate<span class="w"> </span>cold
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># (Will prompt for passphrase via TTY)</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># Restart the service:</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>skr-crypto
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># Verify:</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;X-API-Key: </span><span class="nv">$AUTH_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span>http://127.0.0.1:8000/api/v1/wallets
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Either: from the host (the venv with skr-crypto installed)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">KEY_PASSPHRASE</span><span class="o">=</span><span class="s1">&#39;your-passphrase-here&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>generate<span class="w"> </span>cold
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Or: inside the container</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>skr-crypto<span class="w"> </span>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>generate<span class="w"> </span>cold
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># (Will prompt for passphrase via TTY)</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1"># Restart the service:</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>skr-crypto
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="c1"># Verify:</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;X-API-Key: </span><span class="nv">$AUTH_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span>http://127.0.0.1:8000/api/v1/wallets
 </span></code></pre></div>
 <hr />
 <h2 id="putting-caddy-nginx-in-front">Putting Caddy / nginx in front<a class="headerlink" href="#putting-caddy-nginx-in-front" title="Permanent link">#</a></h2>
 <p>The compose file binds the service to <code>127.0.0.1:8000</code> — only loopback. In production you want TLS + a domain. Caddy is the smallest sensible answer:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>api.example.com {
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    reverse_proxy 127.0.0.1:8000
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    # Restrict by source IP if your callers are known.
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    @allowed remote_ip 203.0.113.0/24
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    handle @allowed {
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        reverse_proxy 127.0.0.1:8000
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    }
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    respond 403
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>}
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>api.example.com {
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    reverse_proxy 127.0.0.1:8000
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    # Restrict by source IP if your callers are known.
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    @allowed remote_ip 203.0.113.0/24
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    handle @allowed {
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        reverse_proxy 127.0.0.1:8000
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    }
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    respond 403
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>}
 </span></code></pre></div>
 <p>Make sure <code>TRUSTED_PROXIES</code> in <code>.env</code> includes Caddy's IP (<code>127.0.0.1</code> if same host, the LAN IP otherwise) so the rate limiter and audit log read <code>X-Forwarded-For</code> correctly.</p>
 <p>For the systemd-managed Caddy + skr-crypto pattern, see <a href="../systemd-vps/">VPS + systemd</a>.</p>
 <hr />
 <h2 id="rotating-the-passphrase">Rotating the passphrase<a class="headerlink" href="#rotating-the-passphrase" title="Permanent link">#</a></h2>
 <p>The keystore's salt + per-entry IVs are tied to the current passphrase. To rotate:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Stop the service.</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>stop<span class="w"> </span>skr-crypto
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Decrypt + re-init under a new passphrase.</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># This is destructive — the old salt is replaced.</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nv">KEY_PASSPHRASE</span><span class="o">=</span><span class="s1">&#39;OLD&#39;</span><span class="w"> </span>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>list<span class="w"> </span>--offline<span class="w">   </span><span class="c1"># confirm what you have</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Export each wallet&#39;s hex (needs current passphrase):</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="nv">KEY_PASSPHRASE</span><span class="o">=</span><span class="s1">&#39;OLD&#39;</span><span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s2">from skr_crypto.server.encrypted_keystore import load_keystore</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s2">for e in load_keystore(&#39;data/keystore.json&#39;, b&#39;OLD&#39;):</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s2">    print(e.name, bytes(e.raw_key).hex())</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s2">&quot;</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="c1"># Init fresh under the new passphrase.</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>encrypt<span class="w"> </span>-o<span class="w"> </span>data/keystore.json.new<span class="w"> </span>--force
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="c1"># Re-add each wallet under the new passphrase using --hex.</span>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>add<span class="w"> </span>main<span class="w"> </span>--hex<span class="w"> </span>&lt;hex-from-above&gt;<span class="w"> </span>--yes<span class="w">  </span><span class="c1"># (uses new passphrase)</span>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="c1"># ... (repeat per wallet)</span>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="c1"># Swap files.</span>
-</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>mv<span class="w"> </span>data/keystore.json.new<span class="w"> </span>data/keystore.json
-</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>
-</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="c1"># Update .env passphrase, restart.</span>
-</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Stop the service.</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>stop<span class="w"> </span>skr-crypto
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Decrypt + re-init under a new passphrase.</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># This is destructive — the old salt is replaced.</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nv">KEY_PASSPHRASE</span><span class="o">=</span><span class="s1">&#39;OLD&#39;</span><span class="w"> </span>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>list<span class="w"> </span>--offline<span class="w">   </span><span class="c1"># confirm what you have</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Export each wallet&#39;s hex (needs current passphrase):</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nv">KEY_PASSPHRASE</span><span class="o">=</span><span class="s1">&#39;OLD&#39;</span><span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="s2">from skr_crypto.server.encrypted_keystore import load_keystore</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="s2">for e in load_keystore(&#39;data/keystore.json&#39;, b&#39;OLD&#39;):</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="s2">    print(e.name, bytes(e.raw_key).hex())</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="s2">&quot;</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="c1"># Init fresh under the new passphrase.</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>encrypt<span class="w"> </span>-o<span class="w"> </span>data/keystore.json.new<span class="w"> </span>--force
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="c1"># Re-add each wallet under the new passphrase using --hex.</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>skr-crypto<span class="w"> </span>wallet<span class="w"> </span>add<span class="w"> </span>main<span class="w"> </span>--hex<span class="w"> </span>&lt;hex-from-above&gt;<span class="w"> </span>--yes<span class="w">  </span><span class="c1"># (uses new passphrase)</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="c1"># ... (repeat per wallet)</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="c1"># Swap files.</span>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>mv<span class="w"> </span>data/keystore.json.new<span class="w"> </span>data/keystore.json
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>
+</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="c1"># Update .env passphrase, restart.</span>
+</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
 </span></code></pre></div>
 <p>A first-class <code>wallet rotate-passphrase</code> command isn't shipped yet. Do this carefully and back up first.</p>
 <hr />
@@ -2303,14 +2395,14 @@
 <hr />
 <h2 id="backup-strategy">Backup strategy<a class="headerlink" href="#backup-strategy" title="Permanent link">#</a></h2>
 <p>You need to back up:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>data/
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── keystore.json       — the AES-256-GCM keystore
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├── audit.log           — append-only financial trail
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>└── idempotency.db      — SQLite WAL idempotency state
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>data/
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>├── keystore.json       — the AES-256-GCM keystore
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>├── audit.log           — append-only financial trail
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>└── idempotency.db      — SQLite WAL idempotency state
 </span></code></pre></div>
 <p>A daily rsync to a separate host is enough. The CLI ships:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>skr-crypto<span class="w"> </span>skr-crypto<span class="w"> </span>backup
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Writes /var/lib/skr-crypto/data/backup-2026-04-30T12-00-00.tar.gz</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>skr-crypto<span class="w"> </span>skr-crypto<span class="w"> </span>backup
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Writes /var/lib/skr-crypto/data/backup-2026-04-30T12-00-00.tar.gz</span>
 </span></code></pre></div>
 <p>The tarball is <code>chmod 600</code>. Pull it off the host immediately — leaving the only backup on the same host as the service is the same as no backup.</p>
 <p><strong>Restore</strong> is <code>skr-crypto restore &lt;tarball&gt;</code> — same machine or another. The wallet pool reloads on next service restart.</p>
