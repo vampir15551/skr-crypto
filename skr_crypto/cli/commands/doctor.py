@@ -142,6 +142,49 @@ def _check_running_as_root() -> tuple[Status, str]:
     return Status.OK, f"running as uid {os.geteuid()}"
 
 
+def _check_telegram_alerts(install_dir: Path) -> tuple[Status, str]:
+    """Verify the Telegram bot token reaches Bot API if alerts are configured.
+
+    No-op when alerts aren't configured (returns OK with "not configured").
+    With both env vars set, calls ``getMe`` once with a short timeout —
+    network down / wrong token surfaces here, not at the first audit event.
+    """
+    env_path = install_dir / ".env"
+    if not env_path.exists():
+        return Status.OK, "alerts not configured (.env not present)"
+    env = config.read_env_file(env_path)
+    token = env.get("TELEGRAM_BOT_TOKEN", "")
+    chat = env.get("TELEGRAM_CHAT_ID", "")
+    if not token and not chat:
+        return Status.OK, "alerts not configured (opt-in)"
+    if not (token and chat):
+        return Status.WARN, (
+            "alerts half-configured: only one of TELEGRAM_BOT_TOKEN / "
+            "TELEGRAM_CHAT_ID is set — alerts stay disabled"
+        )
+    # Both set — probe Bot API getMe.
+    try:
+        import requests
+    except ImportError:
+        return Status.WARN, (
+            "alerts configured but `requests` not installed; install "
+            "skr-crypto[server] to enable the Telegram worker"
+        )
+    try:
+        resp = requests.get(
+            f"https://api.telegram.org/bot{token}/getMe", timeout=5,
+        )
+    except Exception as exc:
+        return Status.WARN, f"Telegram unreachable: {type(exc).__name__}"
+    if resp.status_code == 200:
+        data = resp.json() if resp.text else {}
+        username = (data.get("result") or {}).get("username") or "?"
+        return Status.OK, f"Telegram bot @{username} reachable, chat_id set"
+    if resp.status_code == 401:
+        return Status.FAIL, "Telegram getMe → 401: TELEGRAM_BOT_TOKEN is wrong"
+    return Status.WARN, f"Telegram getMe → {resp.status_code}"
+
+
 @click.command("doctor")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 @click.pass_context
@@ -167,6 +210,7 @@ def cmd(ctx: click.Context, as_json: bool) -> None:
         ("key provider",  _check_key_provider(install_dir)),
         ("data dir",      _check_data_dir(install_dir)),
         ("not as root",   _check_running_as_root()),
+        ("telegram",      _check_telegram_alerts(install_dir)),
     ]
 
     if as_json:

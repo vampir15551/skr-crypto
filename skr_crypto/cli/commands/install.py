@@ -59,6 +59,10 @@ DEFAULTS = {
     "keychain_service": "skr-crypto",
     "keychain_account": "treasury",
     "keystore_file": "data/keystore.json",
+    # Telegram alerts (1.9.0+)
+    "telegram_bot_token": "",
+    "telegram_chat_id": "",
+    "alert_send_threshold_usdt": "",
 }
 
 KEY_PROVIDER_OPTIONS = [
@@ -208,7 +212,8 @@ def _collect_settings(opts: dict, *, interactive: bool) -> dict:
       2. interactive prompt — if interactive
       3. DEFAULTS[...]
     """
-    n_steps = 7 + (1 if opts["advanced"] else 0)
+    # 7 base steps + Telegram alerts step + optional advanced.
+    n_steps = 8 + (1 if opts["advanced"] else 0)
 
     s: dict = {}
 
@@ -336,7 +341,39 @@ def _collect_settings(opts: dict, *, interactive: bool) -> dict:
     else:
         s["gen_key"] = False
 
-    # ── Step 7: advanced knobs (only if --advanced or asked) ─────────────
+    # ── Step 7: Telegram operator alerts (1.9.0+, opt-in) ────────────────
+    s["telegram_bot_token"] = DEFAULTS["telegram_bot_token"]
+    s["telegram_chat_id"] = DEFAULTS["telegram_chat_id"]
+    s["alert_send_threshold_usdt"] = DEFAULTS["alert_send_threshold_usdt"]
+    if interactive:
+        wants_alerts = output.ask_yes_no(
+            "Configure Telegram alerts? — push notifications to a "
+            "Telegram chat for rejects / failures / sanctions hits",
+            default=False,
+            step=f"[7/{n_steps}]",
+        )
+        if wants_alerts:
+            output.info("")
+            output.info(
+                "  See [italic]skr-crypto alert setup[/italic] for the full "
+                "@BotFather walkthrough; the short version:\n"
+                "    1) /newbot in Telegram → copy the HTTP API token\n"
+                "    2) DM the bot or add to a group, then forward any\n"
+                "       message to @userinfobot to grab the numeric chat_id"
+            )
+            s["telegram_bot_token"] = output.ask(
+                "TELEGRAM_BOT_TOKEN", default="", secret=True,
+            )
+            s["telegram_chat_id"] = output.ask(
+                "TELEGRAM_CHAT_ID (numeric)", default="",
+            )
+            s["alert_send_threshold_usdt"] = output.ask(
+                "ALERT_SEND_THRESHOLD_USDT (also alert on big sends; "
+                "blank = off)",
+                default="",
+            )
+
+    # ── Step 8: advanced knobs (only if --advanced or asked) ─────────────
     s["min_trx_reserve"] = DEFAULTS["min_trx_reserve"]
     s["max_energy_burn_trx"] = DEFAULTS["max_energy_burn_trx"]
     s["shutdown_timeout"] = DEFAULTS["shutdown_timeout"]
@@ -348,7 +385,7 @@ def _collect_settings(opts: dict, *, interactive: bool) -> dict:
         show_advanced = output.ask_yes_no(
             "Tweak advanced settings (TRX reserve / energy cap / shutdown / rate limit)?",
             default=False,
-            step=f"[7/{n_steps}]",
+            step=f"[8/{n_steps}]",
         )
 
     if show_advanced and interactive:
@@ -468,6 +505,13 @@ def _env_values_from(s: dict, auth_token: str) -> dict[str, str]:
             values["KEYCHAIN_ACCOUNT"] = s["keychain_account"]
     if s["key_provider"] == "encrypted_file" and s.get("keystore_file"):
         values["KEYSTORE_FILE"] = s["keystore_file"]
+    # Telegram alerts (1.9.0+) — only emit if the operator opted in.
+    if s.get("telegram_bot_token"):
+        values["TELEGRAM_BOT_TOKEN"] = s["telegram_bot_token"]
+    if s.get("telegram_chat_id"):
+        values["TELEGRAM_CHAT_ID"] = s["telegram_chat_id"]
+    if s.get("alert_send_threshold_usdt"):
+        values["ALERT_SEND_THRESHOLD_USDT"] = s["alert_send_threshold_usdt"]
     return values
 
 
@@ -516,3 +560,15 @@ def _print_next_steps(s: dict, *, gen_key_done: bool) -> None:
     output.info("  3. Start: [italic]./run.sh[/italic]   "
                 "(or `skr-crypto start` for systemd / docker)")
     output.info("  4. Verify: [italic]skr-crypto status[/italic]")
+    if s.get("telegram_bot_token") and s.get("telegram_chat_id"):
+        output.info("  5. Verify Telegram alerts: "
+                    "[italic]skr-crypto alert test[/italic]")
+    elif s.get("telegram_bot_token") or s.get("telegram_chat_id"):
+        output.warn(
+            "Telegram: only one of TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID "
+            "was provided — alerts stay disabled until both are set in .env."
+        )
+    output.info(
+        "  6. Try a report: "
+        "[italic]skr-crypto report --period $(date -u +%Y-%m)[/italic]"
+    )

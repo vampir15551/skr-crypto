@@ -656,6 +656,241 @@ def risk_endpoint(
 # GET /api/v1/health       — full readiness probe (auth + RPC)
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# POST /api/v1/alert/test  — send a synthetic Telegram alert (1.9.0+)
+# --------------------------------------------------------------------------
+
+@router.post("/alert/test")
+def alert_test_endpoint(
+    request: Request,
+    _: str = Depends(require_scope("admin")),
+):
+    """Send a synthetic alert to the configured Telegram chat.
+
+    Used by the UI's Notifications tab "Send test" button and by
+    operators verifying their bot wiring without waiting for a real
+    event. Always tagged ``synthetic=true`` so receivers can ignore.
+
+    Returns 200 if alerts are configured + the test was enqueued;
+    503 with a clear message otherwise. Does NOT wait for delivery —
+    the worker picks it up on its next tick.
+    """
+    from skr_crypto.server import alerts as alerts_mod
+    if not alerts_mod.is_configured():
+        return Response(
+            content='{"error":"alerts not configured","code":"ALERT_DISABLED"}',
+            media_type="application/json",
+            status_code=503,
+        )
+    from datetime import UTC, datetime
+    fake_entry = {
+        "id": "synthetic-test",
+        "event": "ALERT_TEST",
+        "timestamp": datetime.now(UTC).isoformat(),
+        "wallet": "test",
+        "from_address": "TTestxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "to_address": "TXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "amount": "1.00",
+        "asset": "USDT",
+        "txid": "synthetic-test-tx-id",
+        "idempotency_key": "synthetic-key",
+        "client_ip": client_address(request),
+        "token_id": "synthetic",
+        "result": "test",
+        "details": "synthetic test alert from POST /api/v1/alert/test",
+    }
+    message = alerts_mod.format_message(fake_entry)
+    # Bypass matches_rule — operator explicitly asked for a test.
+    try:
+        alerts_mod.store.enqueue(  # type: ignore[union-attr]
+            audit_event_id=fake_entry["id"],
+            event=fake_entry["event"],
+            chat_id=alerts_mod._chat_id,
+            message=message,
+        )
+    except Exception as exc:
+        return Response(
+            content=f'{{"error":"enqueue failed: {exc}","code":"ALERT_ENQUEUE_FAILED"}}',
+            media_type="application/json",
+            status_code=500,
+        )
+    return {"status": "queued", "synthetic": True}
+
+
+# --------------------------------------------------------------------------
+# GET /api/v1/alert/config  — read-only view of alert configuration (1.9.0+)
+# --------------------------------------------------------------------------
+
+@router.get("/alert/config")
+def alert_config_endpoint(_: str = Depends(require_scope("read"))):
+    """Return the current alert configuration (no secrets).
+
+    Operator UI uses this to render the Notifications tab. The bot
+    token is NEVER returned — only whether one is configured.
+    """
+    from skr_crypto.server import alerts as alerts_mod
+    from skr_crypto.server.config import (
+        ALERT_EVENTS,
+        ALERT_QUIET_HOURS_UTC,
+        ALERT_SANCTIONS_HIT_NOTIFY,
+        ALERT_SEND_THRESHOLD_USDT,
+    )
+    return {
+        "configured": alerts_mod.is_configured(),
+        "chat_id": alerts_mod._chat_id if alerts_mod.is_configured() else "",
+        "events": list(ALERT_EVENTS),
+        "send_threshold_usdt": (
+            str(ALERT_SEND_THRESHOLD_USDT) if ALERT_SEND_THRESHOLD_USDT else None
+        ),
+        "sanctions_hit_notify": ALERT_SANCTIONS_HIT_NOTIFY,
+        "quiet_hours_utc": ALERT_QUIET_HOURS_UTC,
+    }
+
+
+# --------------------------------------------------------------------------
+# GET /api/v1/reports/period             — period summary CSV/XLSX (1.9.0+)
+# GET /api/v1/reports/sanctions-hits     — sanctions hits CSV/XLSX (1.9.0+)
+# GET /api/v1/reports/period/sparkline   — JSON for the UI sparkline (1.9.0+)
+# --------------------------------------------------------------------------
+
+def _parse_iso_date(value: str, *, label: str):
+    from datetime import date as _date
+    try:
+        return _date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(f"{label}={value!r} is not a YYYY-MM-DD date") from exc
+
+
+@router.get("/reports/period")
+def reports_period_endpoint(
+    request: Request,
+    from_: str = Query(..., alias="from", max_length=10,
+                       description="Inclusive UTC start date YYYY-MM-DD"),
+    to: str = Query(..., max_length=10,
+                    description="Inclusive UTC end date YYYY-MM-DD"),
+    format: str = Query(default="csv", pattern="^(csv|xlsx)$"),
+    _: str = Depends(require_scope("read")),
+):
+    """Period summary report. CSV by default; XLSX requires [reports] extra."""
+    from skr_crypto.server import reporting
+    from skr_crypto.server.config import AUDIT_LOG_FILE
+    try:
+        from_date = _parse_iso_date(from_, label="from")
+        to_date = _parse_iso_date(to, label="to")
+        reporting.validate_range(from_date, to_date)
+    except ValueError as exc:
+        return Response(
+            content=f'{{"error":"{exc}","code":"REPORT_BAD_RANGE"}}',
+            media_type="application/json",
+            status_code=400,
+        )
+    summary = reporting.aggregate_period(
+        AUDIT_LOG_FILE or None, from_date=from_date, to_date=to_date,
+    )
+    filename = f"skr-crypto-period-{from_date}-to-{to_date}"
+    if format == "xlsx":
+        try:
+            data = reporting.render_period_xlsx(summary)
+        except reporting.XlsxExtraMissing as exc:
+            return Response(
+                content=f'{{"error":"{exc}","code":"REPORT_XLSX_EXTRA_MISSING"}}',
+                media_type="application/json",
+                status_code=503,
+            )
+        return Response(
+            content=data,
+            media_type=reporting.XLSX_CONTENT_TYPE,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}.xlsx"',
+            },
+        )
+    csv_text = reporting.render_period_csv(summary)
+    return Response(
+        content=csv_text,
+        media_type=reporting.CSV_CONTENT_TYPE,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}.csv"',
+        },
+    )
+
+
+@router.get("/reports/sanctions-hits")
+def reports_sanctions_endpoint(
+    request: Request,
+    from_: str = Query(..., alias="from", max_length=10),
+    to: str = Query(..., max_length=10),
+    format: str = Query(default="csv", pattern="^(csv|xlsx)$"),
+    _: str = Depends(require_scope("read")),
+):
+    """Every SEND_REJECTED with a sanctions match in the date range."""
+    from skr_crypto.server import reporting
+    from skr_crypto.server.config import AUDIT_LOG_FILE
+    try:
+        from_date = _parse_iso_date(from_, label="from")
+        to_date = _parse_iso_date(to, label="to")
+        reporting.validate_range(from_date, to_date)
+    except ValueError as exc:
+        return Response(
+            content=f'{{"error":"{exc}","code":"REPORT_BAD_RANGE"}}',
+            media_type="application/json",
+            status_code=400,
+        )
+    hits = reporting.list_sanctions_hits(
+        AUDIT_LOG_FILE or None, from_date=from_date, to_date=to_date,
+    )
+    filename = f"skr-crypto-sanctions-{from_date}-to-{to_date}"
+    if format == "xlsx":
+        try:
+            data = reporting.render_sanctions_xlsx(hits)
+        except reporting.XlsxExtraMissing as exc:
+            return Response(
+                content=f'{{"error":"{exc}","code":"REPORT_XLSX_EXTRA_MISSING"}}',
+                media_type="application/json",
+                status_code=503,
+            )
+        return Response(
+            content=data,
+            media_type=reporting.XLSX_CONTENT_TYPE,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}.xlsx"',
+            },
+        )
+    csv_text = reporting.render_sanctions_csv(hits)
+    return Response(
+        content=csv_text,
+        media_type=reporting.CSV_CONTENT_TYPE,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}.csv"',
+        },
+    )
+
+
+@router.get("/reports/period/sparkline")
+def reports_period_sparkline(
+    request: Request,
+    from_: str = Query(..., alias="from", max_length=10),
+    to: str = Query(..., max_length=10),
+    _: str = Depends(require_scope("read")),
+):
+    """JSON time series the UI plots as inline-SVG sparklines."""
+    from skr_crypto.server import reporting
+    from skr_crypto.server.config import AUDIT_LOG_FILE
+    try:
+        from_date = _parse_iso_date(from_, label="from")
+        to_date = _parse_iso_date(to, label="to")
+        reporting.validate_range(from_date, to_date)
+    except ValueError as exc:
+        return Response(
+            content=f'{{"error":"{exc}","code":"REPORT_BAD_RANGE"}}',
+            media_type="application/json",
+            status_code=400,
+        )
+    summary = reporting.aggregate_period(
+        AUDIT_LOG_FILE or None, from_date=from_date, to_date=to_date,
+    )
+    return reporting.sparkline_series(summary)
+
+
 @router.get("/metrics")
 def metrics_endpoint(_: str = Depends(require_scope("metrics"))):
     """Prometheus text exposition.

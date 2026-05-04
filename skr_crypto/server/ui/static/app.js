@@ -33,6 +33,26 @@ document.addEventListener('alpine:init', () => {
     riskExternal: false,
     riskReport: null,
 
+    // Reports tab (1.9.0+)
+    reports: {
+      fromDate: '',
+      toDate: '',
+      preview: [],
+      spark: { dates: [], send_success_volume_usdt: [], send_rejected_count: [] },
+      svgViewBox: '0 0 100 20',
+      svgPolylineVolume: '',
+      svgPolylineRejected: '',
+      error: '',
+    },
+
+    // Notifications tab (1.9.0+)
+    alertConfig: {
+      configured: false, chat_id: '', events: [],
+      send_threshold_usdt: null, sanctions_hit_notify: false,
+      quiet_hours_utc: '',
+    },
+    alertTestResult: '',
+
     init() {
       // Restore session if present
       const tok = sessionStorage.getItem('skr_token') || '';
@@ -47,7 +67,7 @@ document.addEventListener('alpine:init', () => {
 
     applyHash() {
       const h = location.hash.replace(/^#\//, '');
-      if (h && ['dashboard','wallets','audit','risk','tokens','webhooks'].includes(h)) {
+      if (h && ['dashboard','wallets','audit','risk','reports','notifications','tokens','webhooks'].includes(h)) {
         this.tab = h;
       }
     },
@@ -59,6 +79,8 @@ document.addEventListener('alpine:init', () => {
       if (t === 'dashboard') this.refreshHealth();
       else if (t === 'wallets') this.refreshWallets();
       else if (t === 'audit') this.refreshAudit();
+      else if (t === 'reports') this.initReportsTab();
+      else if (t === 'notifications') this.refreshAlertConfig();
     },
 
     async login() {
@@ -147,6 +169,114 @@ document.addEventListener('alpine:init', () => {
         '/api/v1/risk/' + encodeURIComponent(this.riskAddr) + '?external=' + ext
       );
       this.riskReport = r.ok ? r.body : { level: 'error', checks: [] };
+    },
+
+    // ── Reports tab ────────────────────────────────────────────────────
+    initReportsTab() {
+      if (!this.reports.fromDate || !this.reports.toDate) {
+        const today = new Date();
+        const past = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
+        this.reports.toDate = today.toISOString().slice(0, 10);
+        this.reports.fromDate = past.toISOString().slice(0, 10);
+      }
+      this.loadReportPreview();
+    },
+
+    async loadReportPreview() {
+      this.reports.error = '';
+      const qs = 'from=' + this.reports.fromDate + '&to=' + this.reports.toDate;
+      const sparkR = await this.api('/api/v1/reports/period/sparkline?' + qs);
+      if (!sparkR.ok) {
+        this.reports.error = (sparkR.body && sparkR.body.error) || ('preview failed: ' + sparkR.status);
+        return;
+      }
+      this.reports.spark = sparkR.body || this.reports.spark;
+      this.computeSparkSvg();
+      // Build a tiny preview table from the same data + zero-filled extras.
+      this.reports.preview = (this.reports.spark.dates || []).map((d, i) => ({
+        date: d,
+        send_success_count: this.reports.spark.send_success_count[i] || 0,
+        send_success_volume_usdt: this.reports.spark.send_success_volume_usdt[i] || 0,
+        send_rejected_count: this.reports.spark.send_rejected_count[i] || 0,
+        send_failed_count: 0,
+        receipt_resolved_success_count: 0,
+        receipt_resolved_failure_count: 0,
+      }));
+    },
+
+    computeSparkSvg() {
+      // Inline SVG sparklines — no chart library. ~30 lines, vendored
+      // in the codebase ethos.
+      const buildPoints = (vals, height) => {
+        if (!vals.length) return '';
+        const max = Math.max(...vals, 1);
+        const w = 100, h = height;
+        return vals.map((v, i) => {
+          const x = (i / Math.max(vals.length - 1, 1)) * w;
+          const y = h - (v / max) * h;
+          return x.toFixed(2) + ',' + y.toFixed(2);
+        }).join(' ');
+      };
+      this.reports.svgViewBox = '0 0 100 20';
+      this.reports.svgPolylineVolume =
+        buildPoints(this.reports.spark.send_success_volume_usdt || [], 20);
+      this.reports.svgPolylineRejected =
+        buildPoints(this.reports.spark.send_rejected_count || [], 20);
+    },
+
+    downloadReport(kind, fmt) {
+      // Build a one-shot URL with the token in a query string is unsafe
+      // (token leaks to logs). Instead fetch the file with the header,
+      // then trigger a Blob download.
+      const qs = 'from=' + this.reports.fromDate + '&to=' + this.reports.toDate + '&format=' + fmt;
+      const path = kind === 'period'
+        ? '/api/v1/reports/period?' + qs
+        : '/api/v1/reports/sanctions-hits?' + qs;
+      this.reports.error = '';
+      fetch(path, { headers: { 'X-API-Key': this.token } }).then(async r => {
+        if (!r.ok) {
+          let msg = 'download failed: ' + r.status;
+          try { const b = await r.json(); if (b.error) msg = b.error; } catch (e) {}
+          this.reports.error = msg;
+          return;
+        }
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const cd = r.headers.get('content-disposition') || '';
+        const match = cd.match(/filename="([^"]+)"/);
+        a.download = match ? match[1] : (kind + '.' + fmt);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    },
+
+    // ── Notifications tab ──────────────────────────────────────────────
+    async refreshAlertConfig() {
+      const r = await this.api('/api/v1/alert/config');
+      if (r.ok) this.alertConfig = r.body;
+    },
+
+    async sendTestAlert() {
+      this.alertTestResult = 'sending…';
+      try {
+        const r = await fetch('/api/v1/alert/test', {
+          method: 'POST',
+          headers: { 'X-API-Key': this.token },
+        });
+        if (r.ok) {
+          this.alertTestResult = 'queued — check the configured Telegram chat';
+        } else {
+          let msg = 'failed: ' + r.status;
+          try { const b = await r.json(); if (b.error) msg = b.error; } catch (e) {}
+          this.alertTestResult = msg;
+        }
+      } catch (e) {
+        this.alertTestResult = 'network error: ' + e;
+      }
     },
 
     // Helpers

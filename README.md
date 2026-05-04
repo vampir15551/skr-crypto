@@ -48,7 +48,9 @@ Same code, same version, same tests. The `[server]` extra pulls in `fastapi`, `t
 | **Risk preflight** | 8 checks before broadcast: validity, burn-pattern, activation, contract destination, Tether blacklist, OFAC SDN, TronScan reputation, MistTrack AML. |
 | **Reconciliation** | MSK-day startup self-check: yesterday's audit ↔ on-chain receipts. Best-effort. |
 | **Metrics** | Prometheus text exposition with stable label cardinality. |
-| **CLI** | 18 commands: `install`, `start/stop/restart`, `status`, `balance`, `wallet {list,add,generate,encrypt,...}`, `risk`, `audit`, `reconcile`, `check-tx`, `backup/restore`, `doctor`, ... |
+| **Operator alerts** (1.9.0+) | Opt-in Telegram bot for `SEND_REJECTED` / `SEND_FAILED` / sanctions hits / high-value sends; outbound-only, quiet hours, retry queue. |
+| **Period reporting** (1.9.0+) | `skr-crypto report --period YYYY-MM` — daily summary + volume; sanctions-hit report; CSV in core, XLSX via `[reports]` extra. |
+| **CLI** | 20 commands: `install`, `start/stop/restart`, `status`, `balance`, `wallet {list,add,generate,encrypt,...}`, `risk`, `audit`, `reconcile`, `check-tx`, `backup/restore`, `doctor`, `alert`, `report`, ... |
 
 ---
 

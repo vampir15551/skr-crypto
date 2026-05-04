@@ -162,6 +162,27 @@ idempotency_store_size_gauge = Gauge(
 )
 
 # ---------------------------------------------------------------------------
+# Telegram operator alerts (1.9.0+)
+# ---------------------------------------------------------------------------
+
+alert_attempts_total = Counter(
+    "skr_crypto_alert_attempts_total",
+    "Telegram alert delivery attempts by outcome.",
+    ["result"],  # "success" | "fail"
+    registry=registry,
+)
+alert_giveup_total = Counter(
+    "skr_crypto_alert_giveup_total",
+    "Telegram alert deliveries that exhausted the retry budget.",
+    registry=registry,
+)
+alert_queue_depth_gauge = Gauge(
+    "skr_crypto_alert_queue_depth",
+    "Pending Telegram alert deliveries waiting on the worker.",
+    registry=registry,
+)
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 

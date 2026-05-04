@@ -20,6 +20,8 @@ warrant one.
 | [0007](0007-engineering-safety-practices.md) | Engineering safety practices for the money path | Invariant tests, threat-model tests, wire-format goldens, property-based fuzz, CHANGELOG/invariant CI gates, CODEOWNERS protection, canary deploy. |
 | [0008](0008-per-caller-api-tokens.md) | Per-caller API tokens with scopes | Token store with scrypt-hashed entries; scopes admin/send/read/metrics; `AUTH_TOKEN` kept as legacy compat shim for 1.x. |
 | [0009](0009-token-bucket-rate-limit.md) | Persisted token-bucket rate limiter | Replaces in-memory sliding window with SQLite-backed token bucket keyed by both IP and token ID. (Implementation deferred to 1.6.0; ADR ships in 1.5.0.) |
+| [0013](0013-telegram-operator-alerts.md) | Telegram operator alerts | Opt-in push notifications for human operators via Telegram Bot API; outbound-only, mirrors webhook semantics, audit log stays the source of truth. (1.9.0) |
+| [0014](0014-period-reporting.md) | Period reporting (CSV core, XLSX optional) | First-party period summary + sanctions-hits reports over the durable audit log; CSV in core, XLSX via the optional `[reports]` extra. (1.9.0) |
 
 ## Format
 

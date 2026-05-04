@@ -10,6 +10,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from skr_crypto.server import metrics
+from skr_crypto.server.alerts import (
+    init_alerts,
+    shutdown_alerts,
+)
 from skr_crypto.server.audit import AuditWriteError
 from skr_crypto.server.config import (
     RATE_LIMIT_IP_CAPACITY,
@@ -137,6 +141,31 @@ async def lifespan(_app: FastAPI):
         timeout_sec=WEBHOOK_TIMEOUT_SEC,
         interval_sec=WEBHOOK_WORKER_INTERVAL_SEC,
     )
+    # Telegram operator alerts (opt-in via TELEGRAM_BOT_TOKEN +
+    # TELEGRAM_CHAT_ID). See ADR 0013.
+    from skr_crypto.server.config import (
+        ALERT_BACKOFF_SCHEDULE,
+        ALERT_EVENTS,
+        ALERT_QUIET_HOURS_UTC,
+        ALERT_SANCTIONS_HIT_NOTIFY,
+        ALERT_SEND_THRESHOLD_USDT,
+        ALERT_TIMEOUT_SEC,
+        ALERT_WORKER_INTERVAL_SEC,
+        TELEGRAM_BOT_TOKEN,
+        TELEGRAM_CHAT_ID,
+    )
+    init_alerts(
+        db_path=IDEMPOTENCY_DB_PATH or None,
+        bot_token=TELEGRAM_BOT_TOKEN,
+        chat_id=TELEGRAM_CHAT_ID,
+        event_filter=ALERT_EVENTS,
+        send_threshold_usdt=ALERT_SEND_THRESHOLD_USDT,
+        sanctions_notify=ALERT_SANCTIONS_HIT_NOTIFY,
+        quiet_hours_utc=ALERT_QUIET_HOURS_UTC,
+        backoff_schedule=ALERT_BACKOFF_SCHEDULE,
+        timeout_sec=ALERT_TIMEOUT_SEC,
+        interval_sec=ALERT_WORKER_INTERVAL_SEC,
+    )
     mark_started()
     reset_timer()
     # Refresh the OFAC SDN sanctions list (best-effort). The list is
@@ -161,6 +190,7 @@ async def lifespan(_app: FastAPI):
     log.info("Payout service ready")
     yield
     log.info("Payout service stopping")
+    shutdown_alerts()
     shutdown_webhooks()
     shutdown_poller()
     shutdown_rate_limiter()

@@ -56,6 +56,7 @@ def _register() -> None:
     """Lazy import + attach each subcommand. Keeps `--help` quick and
     isolates import failures: a broken command can't crash the whole CLI."""
     from skr_crypto.cli.commands import (
+        alert,
         audit,
         backup,
         balance,
@@ -68,6 +69,7 @@ def _register() -> None:
         keygen,
         logs,
         reconcile,
+        report,
         restore,
         risk,
         start_stop,
@@ -96,6 +98,8 @@ def _register() -> None:
     cli.add_command(wallet.group)
     cli.add_command(token.group)
     cli.add_command(webhook.group)
+    cli.add_command(alert.group)
+    cli.add_command(report.cmd)
     cli.add_command(backup.cmd)
     cli.add_command(restore.cmd)
     cli.add_command(doctor.cmd)
