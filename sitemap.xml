@@ -2,162 +2,170 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/api-reference/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/architecture/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/audit-log/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/changelog/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/configuration/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/idempotency/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/install/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/key-providers/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/keystore-format/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/migration-1.4/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/monitoring/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/multi-wallet/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/releases/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/risk-preflight/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/security/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0001-sync-only-architecture/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0002-pluggable-key-providers/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0003-msk-day-reconciliation/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0004-audit-hard-error/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0005-multi-wallet-pool/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0006-encrypted-keystore/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0007-engineering-safety-practices/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0008-per-caller-api-tokens/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0009-token-bucket-rate-limit/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0010-receipt-poller/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0011-opt-in-webhooks/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/adr/0012-read-only-web-ui/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
+    </url>
+    <url>
+         <loc>https://vampir15551.github.io/skr-crypto/adr/0013-telegram-operator-alerts/</loc>
+         <lastmod>2026-06-01</lastmod>
+    </url>
+    <url>
+         <loc>https://vampir15551.github.io/skr-crypto/adr/0014-period-reporting/</loc>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/backups/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/configuration/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/diagnostics/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/inspect/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/lifecycle/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/token/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/commands/wallet/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/deployment/docker/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/deployment/local-mac/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
     <url>
          <loc>https://vampir15551.github.io/skr-crypto/deployment/systemd-vps/</loc>
-         <lastmod>2026-04-30</lastmod>
+         <lastmod>2026-06-01</lastmod>
     </url>
 </urlset>
