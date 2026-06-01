@@ -54,7 +54,7 @@ server = [
     # starlette transitively; we pin it directly so pip-audit stays
     # clean independent of FastAPI's own constraint.
     "starlette>=0.49.1",
-    "tronpy==0.5.0",
+    "tronpy==0.6.2",
     "base58==2.1.1",
     "prometheus-client>=0.21,<1.0",
     # AES-256-GCM + scrypt for the encrypted_file key provider. Pure
