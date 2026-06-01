@@ -309,6 +309,7 @@ def test_install_advanced_flag_prompts_advanced(runner, tmp_path):
         "",               # bind port
         "2",              # tunnel no
         "2",              # gen-key no
+        "2",              # configure Telegram alerts? — no (1.9.0+ step)
         # advanced is forced via flag — but the wizard still shows the
         # toggle question? In our flow, --advanced flag means "show the
         # prompts" and skips the yes/no. Let's feed the per-knob answers.

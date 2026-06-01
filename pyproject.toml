@@ -82,6 +82,13 @@ docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
 ]
+# `pip install skr-crypto[server,reports]` adds XLSX support to the
+# reporting module. CSV always works without this extra. openpyxl is
+# pure-Python with bundled wheels; ~12MB transitive (lxml) is the only
+# weight, which is why it's opt-in.
+reports = [
+    "openpyxl>=3.1,<4.0",
+]
 
 [project.scripts]
 # CLI binary, always installed.

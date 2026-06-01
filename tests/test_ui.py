@@ -24,29 +24,49 @@ UI_DIR = Path(__file__).parent.parent / "skr_crypto" / "server" / "ui" / "static
 class TestUIBundle:
     @pytest.mark.invariant
     def test_bundle_contains_no_send_post(self):
-        """INVARIANT (ADR 0012): the UI bundle MUST NOT contain a
-        POST to /api/v1/send. Money paths are exclusively the
-        authenticated HTTP API. If this regresses, someone added a
-        money-moving form to the read-only UI — undo it.
+        """INVARIANT (ADR 0012, refined by ADR 0013): the UI bundle MUST
+        NOT contain a POST to /api/v1/send or any other money-moving
+        endpoint. The narrow set of allowed POSTs is whitelisted below.
+
+        Money paths are exclusively the authenticated HTTP API. If this
+        regresses with a NEW POST that isn't whitelisted, someone added
+        a write-op to the UI — either whitelist it (with an ADR) or
+        undo it.
         """
+        # Allowed POST endpoints from the UI. Each one MUST be backed
+        # by an ADR (write actions in the UI are an exception, not the
+        # rule). Currently:
+        #   - /api/v1/alert/test    — ADR 0013 (Telegram alerts test button)
+        ALLOWED_POST_PATHS = {
+            "/api/v1/alert/test",
+        }
         bad_patterns = [
             r"/api/v1/send",
             r"['\"]POST['\"].*?send",
-            # Reasonable canaries for a future write-op slip
-            r"method:\s*['\"]POST['\"]",
         ]
         offenses = []
         for path in UI_DIR.glob("*.js"):
             content = path.read_text()
+            stripped = _strip_js_comments(content)
             for pat in bad_patterns:
-                # Allow the pattern in COMMENTS (// or /* */) — those
-                # documentation strings are how we got the invariant.
-                # We strip comments before scanning.
-                stripped = _strip_js_comments(content)
                 if re.search(pat, stripped):
                     offenses.append((path.name, pat, _excerpt(stripped, pat)))
+            # Generic "method: 'POST'" check, but tolerate the allowed
+            # endpoints — find every POST call and assert its target is
+            # in the whitelist.
+            for m in re.finditer(
+                r"fetch\(\s*['\"]([^'\"]+)['\"]\s*,\s*\{[^}]*method:\s*['\"]POST['\"]",
+                stripped,
+            ):
+                target = m.group(1)
+                if target not in ALLOWED_POST_PATHS:
+                    offenses.append((
+                        path.name,
+                        f"unwhitelisted POST to {target!r}",
+                        _excerpt(stripped, re.escape(m.group(0))),
+                    ))
         assert not offenses, (
-            "UI bundle contains money-moving call(s):\n"
+            "UI bundle contains money-moving or unwhitelisted write call(s):\n"
             + "\n".join(f"  {f}: pattern {p!r} → {e!r}" for f, p, e in offenses)
         )
 

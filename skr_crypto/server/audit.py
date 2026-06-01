@@ -174,6 +174,13 @@ def record(
         # Don't import-fail the rest of audit if webhooks isn't loaded
         # for some reason (test scenarios).
         audit_log.warning("webhook enqueue raised: %s", exc)
+    # Telegram operator alerts (1.9.0+) — best-effort, never raises.
+    # Same contract as webhooks: audit is truth, alerts are derived.
+    try:
+        from skr_crypto.server import alerts
+        alerts.notify_event(entry)
+    except Exception as exc:
+        audit_log.warning("alert notify raised: %s", exc)
 
 
 def close_audit_file() -> None:

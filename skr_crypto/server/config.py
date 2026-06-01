@@ -277,6 +277,79 @@ WEBHOOK_WORKER_INTERVAL_SEC: float = float(
 )
 
 # ---------------------------------------------------------------------------
+# Telegram operator alerts (1.9.0+, ADR 0013) — opt-in
+# ---------------------------------------------------------------------------
+# Push notifications for human operators. Outbound-only via Telegram
+# Bot API; we never poll for incoming messages, never register a
+# Telegram-side webhook, never expose chatops commands. The bot is a
+# notifier, not a control surface — money flows still go through the
+# authenticated API only (ADR 0001).
+#
+# Both TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set; either
+# empty disables the feature entirely. The chat_id is whatever
+# Telegram returns for the destination — a personal DM, a group, or a
+# channel where the bot is an admin.
+TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+
+# Comma-separated audit event names that ALWAYS trigger an alert.
+# Defaults to the human-actionable subset: rejects, failures, and
+# webhook giveups. SEND_SUCCESS is intentionally NOT here — alerting
+# on every success would drown out the signal; use
+# ALERT_SEND_THRESHOLD_USDT for high-value sends instead.
+ALERT_EVENTS: tuple[str, ...] = tuple(
+    e.strip() for e in os.getenv(
+        "ALERT_EVENTS",
+        "SEND_REJECTED,SEND_FAILED,WEBHOOK_GIVEUP",
+    ).split(",") if e.strip()
+)
+
+# When set, also alert on SEND_SUCCESS whose amount >= threshold.
+# Empty / "0" disables the high-value alert. Decimal-parsed.
+try:
+    _alert_threshold_raw = os.getenv("ALERT_SEND_THRESHOLD_USDT", "").strip()
+    ALERT_SEND_THRESHOLD_USDT: Decimal | None = (
+        Decimal(_alert_threshold_raw) if _alert_threshold_raw else None
+    )
+    if ALERT_SEND_THRESHOLD_USDT is not None and ALERT_SEND_THRESHOLD_USDT <= 0:
+        ALERT_SEND_THRESHOLD_USDT = None
+except InvalidOperation:
+    ALERT_SEND_THRESHOLD_USDT = None
+
+# Sanctions hits (SEND_REJECTED with details containing "sanctions")
+# get a separate, emphasised message even outside ALERT_EVENTS. On by
+# default — sanctions are the most legally consequential class of
+# event and operators should always know.
+ALERT_SANCTIONS_HIT_NOTIFY: bool = os.getenv(
+    "ALERT_SANCTIONS_HIT_NOTIFY", "true",
+).strip().lower() in ("1", "true", "yes", "on")
+
+# Quiet hours, UTC. Format: "HH-HH" (e.g. "22-08" = 22:00 UTC to
+# 08:00 UTC). During this window non-critical alerts are dropped
+# silently; sanctions hits and SEND_FAILED are always-through. Empty
+# = no quiet hours. Wraparound (start > end) is supported.
+ALERT_QUIET_HOURS_UTC: str = os.getenv("ALERT_QUIET_HOURS_UTC", "").strip()
+
+# Per-attempt HTTP timeout to api.telegram.org, seconds.
+ALERT_TIMEOUT_SEC: float = float(os.getenv("ALERT_TIMEOUT_SEC", "10"))
+
+# Backoff schedule (seconds, comma-separated). After the last entry,
+# delivery is marked giving_up. Default: 0, 5, 30, 300 = 4 attempts
+# over ~6 minutes. Telegram is reliable; long retries just deliver
+# stale alerts.
+ALERT_BACKOFF_SCHEDULE: tuple[float, ...] = tuple(
+    float(x.strip()) for x in os.getenv(
+        "ALERT_BACKOFF_SCHEDULE", "0,5,30,300",
+    ).split(",") if x.strip()
+)
+
+# Worker-thread tick interval (seconds). The worker reads pending
+# deliveries off SQLite and POSTs them.
+ALERT_WORKER_INTERVAL_SEC: float = float(
+    os.getenv("ALERT_WORKER_INTERVAL_SEC", "1.0")
+)
+
+# ---------------------------------------------------------------------------
 # LAN detection
 # ---------------------------------------------------------------------------
 LAN_SUBNETS = ("192.168.88.", "192.168.89.")

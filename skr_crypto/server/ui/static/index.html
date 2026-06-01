@@ -23,6 +23,8 @@
     <a :class="{active: tab==='wallets'}" @click.prevent="go('wallets')" href="#/wallets">Wallets</a>
     <a :class="{active: tab==='audit'}" @click.prevent="go('audit')" href="#/audit">Audit</a>
     <a :class="{active: tab==='risk'}" @click.prevent="go('risk')" href="#/risk">Risk</a>
+    <a :class="{active: tab==='reports'}" @click.prevent="go('reports')" href="#/reports">Reports</a>
+    <a :class="{active: tab==='notifications'}" @click.prevent="go('notifications')" href="#/notifications" x-show="hasAdmin">Notifications</a>
     <a :class="{active: tab==='tokens'}" @click.prevent="go('tokens')" href="#/tokens" x-show="hasAdmin">Tokens</a>
     <a :class="{active: tab==='webhooks'}" @click.prevent="go('webhooks')" href="#/webhooks" x-show="hasAdmin">Webhooks</a>
     <a class="logout" @click.prevent="logout()" href="#">Logout</a>
@@ -165,6 +167,100 @@
         </tbody>
       </table>
     </div>
+  </section>
+
+  <!-- ========== REPORTS ========== -->
+  <section x-show="authed && tab==='reports'" x-cloak>
+    <h2>Reports</h2>
+    <p class="muted">
+      Period summary + sanctions hits over a date range. CSV by default;
+      XLSX requires the <code>[reports]</code> extra on the server.
+    </p>
+
+    <form @submit.prevent="loadReportPreview()" class="filters">
+      <label>From: <input type="date" x-model="reports.fromDate"></label>
+      <label>To:   <input type="date" x-model="reports.toDate"></label>
+      <button type="submit">Preview</button>
+      <button type="button" @click="downloadReport('period', 'csv')">Download CSV</button>
+      <button type="button" @click="downloadReport('period', 'xlsx')">Download XLSX</button>
+    </form>
+
+    <div class="sparkline" x-show="reports.spark.dates.length">
+      <h3>Volume (USDT, last range)</h3>
+      <svg :viewBox="reports.svgViewBox" preserveAspectRatio="none"
+           style="width:100%;height:80px;border:1px solid #ccc;">
+        <polyline :points="reports.svgPolylineVolume"
+                  fill="none" stroke="#3b82f6" stroke-width="2"/>
+      </svg>
+      <h3>Send rejected (count, last range)</h3>
+      <svg :viewBox="reports.svgViewBox" preserveAspectRatio="none"
+           style="width:100%;height:60px;border:1px solid #ccc;">
+        <polyline :points="reports.svgPolylineRejected"
+                  fill="none" stroke="#ef4444" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <div x-show="reports.preview.length">
+      <h3>Preview (first 7 rows)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Sends</th><th>Volume USDT</th>
+            <th>Rejected</th><th>Failed</th><th>Receipts ✓</th><th>Receipts ✗</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="b in reports.preview.slice(0, 7)" :key="b.date">
+            <tr>
+              <td x-text="b.date"></td>
+              <td x-text="b.send_success_count"></td>
+              <td x-text="b.send_success_volume_usdt"></td>
+              <td x-text="b.send_rejected_count"></td>
+              <td x-text="b.send_failed_count"></td>
+              <td x-text="b.receipt_resolved_success_count"></td>
+              <td x-text="b.receipt_resolved_failure_count"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Sanctions hits report</h3>
+    <p class="muted small">Every <code>SEND_REJECTED</code> with a sanctions match in the date range above.</p>
+    <button @click="downloadReport('sanctions-hits', 'csv')">Download CSV</button>
+    <button @click="downloadReport('sanctions-hits', 'xlsx')">Download XLSX</button>
+
+    <p x-show="reports.error" class="error" x-text="reports.error"></p>
+  </section>
+
+  <!-- ========== NOTIFICATIONS (admin) ========== -->
+  <section x-show="authed && tab==='notifications' && hasAdmin" x-cloak>
+    <h2>Telegram alerts</h2>
+    <p class="muted">
+      Read-only here. Edit <code>TELEGRAM_BOT_TOKEN</code>, <code>TELEGRAM_CHAT_ID</code>,
+      <code>ALERT_*</code> in <code>.env</code> and restart the service to change rules.
+    </p>
+
+    <table>
+      <tbody>
+        <tr><td>Configured</td>
+            <td x-text="alertConfig.configured ? '✓ yes' : '✗ no (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID required)'"></td></tr>
+        <tr><td>Chat id</td>          <td><code x-text="alertConfig.chat_id || '—'"></code></td></tr>
+        <tr><td>Always-alert events</td><td x-text="(alertConfig.events || []).join(', ')"></td></tr>
+        <tr><td>High-value threshold (USDT)</td><td x-text="alertConfig.send_threshold_usdt || 'off'"></td></tr>
+        <tr><td>Sanctions-hit notify</td><td x-text="alertConfig.sanctions_hit_notify ? 'on' : 'off'"></td></tr>
+        <tr><td>Quiet hours (UTC)</td>  <td x-text="alertConfig.quiet_hours_utc || 'none'"></td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      <button @click="sendTestAlert()" :disabled="!alertConfig.configured">Send test alert</button>
+      <span x-show="alertTestResult" x-text="alertTestResult" class="muted"></span>
+    </p>
+    <p class="muted small">
+      The synthetic alert is enqueued via <code>POST /api/v1/alert/test</code> (admin scope).
+      It is clearly marked so receivers can ignore.
+    </p>
   </section>
 
   <!-- ========== TOKENS (admin) ========== -->

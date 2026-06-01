@@ -9,6 +9,73 @@ release move `[Unreleased]` → `[X.Y.Z] — YYYY-MM-DD`.
 
 ## [Unreleased]
 
+## [1.9.0] — 2026-05-04
+
+The "operator awareness & reporting" release. Adds two opt-in
+human-facing surfaces — push notifications and period reports —
+without introducing any new daemons or money-path code.
+
+### Added
+
+- **Telegram operator alerts** (ADR 0013). Push notifications for
+  human operators via Telegram Bot API. Outbound-only; bot is a
+  notifier, not a chatops surface.
+  - Opt-in via `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
+  - Triggers: configurable `ALERT_EVENTS`
+    (default `SEND_REJECTED,SEND_FAILED,WEBHOOK_GIVEUP`),
+    optional `ALERT_SEND_THRESHOLD_USDT` for high-value sends, and
+    sanctions-hit emphasis (`ALERT_SANCTIONS_HIT_NOTIFY`,
+    default on).
+  - Quiet hours (`ALERT_QUIET_HOURS_UTC`, e.g. `22-08`); sanctions
+    hits and `SEND_FAILED` always punch through.
+  - Persistent SQLite delivery state (`alert_deliveries` table)
+    with bounded retry (`0,5,30,300` seconds default).
+  - New CLI: `skr-crypto alert {setup,test,list-deliveries,retry}`.
+  - New endpoints: `POST /api/v1/alert/test` (admin, used by the UI),
+    `GET /api/v1/alert/config` (read).
+  - `skr-crypto doctor` learns a `telegram` check (probes Bot API
+    `getMe` if the token is set).
+  - `skr-crypto install` wizard gains an opt-in step (7/N) to
+    configure Telegram alerts during setup.
+- **Period reporting** (ADR 0014). First-party CSV reports over the
+  durable audit log — closes the v1.8 UI Reports placeholder.
+  - New CLI:
+    `skr-crypto report --period YYYY-MM`,
+    `skr-crypto report --from YYYY-MM-DD --to YYYY-MM-DD`,
+    `skr-crypto report sanctions-hits`.
+  - New endpoints: `GET /api/v1/reports/period`,
+    `GET /api/v1/reports/sanctions-hits`,
+    `GET /api/v1/reports/period/sparkline` (JSON for the UI).
+  - XLSX output via the new optional `[reports]` extra
+    (`pip install 'skr-crypto[server,reports]'`); CSV always works.
+  - Date-range cap: 366 days per request.
+- **UI:** new `Reports` tab with date pickers, inline-SVG sparklines
+  (volume + reject count), preview table, and CSV/XLSX download
+  buttons. New `Notifications` tab (admin) showing the live
+  Telegram alert config and a `Send test` button.
+- New Prometheus metrics:
+  `skr_crypto_alert_attempts_total{result}`,
+  `skr_crypto_alert_giveup_total`,
+  `skr_crypto_alert_queue_depth`.
+
+### Changed
+
+- ADR 0012's UI invariant test refined: POST endpoints are no
+  longer banned outright; they are whitelisted (currently only
+  `/api/v1/alert/test`). Money-moving POSTs remain forbidden.
+- `skr-crypto install` step count grew from 7 (+ optional advanced)
+  to 8 (+ optional advanced) to fit the Telegram step.
+
+### Notes for upgraders
+
+- No breaking changes. Telegram alerts and reports are opt-in;
+  existing deploys see no behaviour change until they configure
+  the new env vars or call the new commands.
+- Balance-low and receipt-timeout alerts (which would require a
+  new sweeper daemon) are intentionally **not** in 1.9 — parked
+  for a future minor when they ship together with the
+  balance-monitor daemon.
+
 ## [1.8.2] — 2026-04-30
 
 Bugfix release for the read-only UI introduced in 1.8.0. The `app()`
