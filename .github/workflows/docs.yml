@@ -39,7 +39,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # mkdocs gh-deploy needs the full history to push to gh-pages
           fetch-depth: 0
